@@ -1,8 +1,7 @@
 {
   "name": "@quick-ex-db/monorepo",
   "version": "1.0.0",
-  "description": "A CLI tool to quickly scaffold an Express.js app with PostgreSQL and Jest.",
-  "main": "index.js",
+  "description": "A CLI tool to quickly scaffold an Express.js server with a database",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
