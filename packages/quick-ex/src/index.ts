@@ -24,7 +24,7 @@ const cwd = process.cwd();
 
 // prettier-ignore
 const helpMessage = `\
-Usage: create-express-server [options] [project-name]
+Usage: quick-ex-db [options] [project-name]
 
 Create a new Express project in JavaScript or TypeScript.
 With no arguments, start the CLI in interactive mode.
