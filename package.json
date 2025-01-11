@@ -1,6 +1,30 @@
 {
-  "dependencies": {
-    "ts-node": "^10.9.2",
+  "name": "@quick-ex-db/monorepo",
+  "version": "1.0.0",
+  "description": "A CLI tool to quickly scaffold an Express.js app with PostgreSQL and Jest.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TTibbs/quick-ex-db.git"
+  },
+  "keywords": [
+    "backend",
+    "database",
+    "express",
+    "server"
+  ],
+  "author": "Terry Ward",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/TTibbs/quick-ex-db/issues"
+  },
+  "homepage": "https://cexpgs.vercel.app/",
+  "devDependencies": {
+    "@types/node": "^22.10.5",
     "typescript": "^5.7.3"
   }
 }
