@@ -1,7 +1,7 @@
 {
   "name": "quick-ex-db",
   "private": false,
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "A CLI tool to quickly scaffold an Express.js server with a database",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -17,12 +17,12 @@
     "server"
   ],
   "author": "Terry Ward",
-  "license": "ISC",
+  "license": "MIT",
   "type": "module",
   "bugs": {
     "url": "https://github.com/TTibbs/quick-ex-db/issues"
   },
-  "homepage": "https://cexpgs.vercel.app/",
+  "homepage": "https://quick-ex-db-fe.vercel.app/",
   "devDependencies": {
     "@types/express": "^5.0.0",
     "@types/mongoose": "^5.11.96",

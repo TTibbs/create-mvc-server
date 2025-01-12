@@ -34,13 +34,13 @@
     "scaffolding"
   ],
   "author": "Terry Ward <tward5824@gmail.com>",
-  "license": "ISC",
+  "license": "MIT",
   "description": "A CLI tool to quickly scaffold an Express.js app with PostgreSQL and Jest.",
   "repository": {
     "type": "git",
     "url": "https://github.com/TTibbs/create-expg-app.git"
   },
-  "homepage": "https://cexpgs.vercel.app/",
+  "homepage": "https://quick-ex-db-fe.vercel.app/",
   "bugs": {
     "url": "https://github.com/TTibbs/create-expg-app/issues"
   },
