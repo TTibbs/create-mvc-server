@@ -8,7 +8,7 @@ import minimist from "minimist";
 import prompts from "prompts";
 import colors from "picocolors";
 
-const { blue, red, reset, yellow } = colors;
+const { blue, red, reset, yellow, green } = colors;
 
 // Avoids autoconversion to number of the project name by defining that the args
 // non associated with an option ( _ ) needs to be parsed as a string. See #4606
@@ -33,7 +33,8 @@ Options:
   -t, --template NAME        use a specific template
 
 Available templates:
-${yellow    ('postgresql-ts     postgresql'  )}`
+${yellow    ('postgresql-ts     postgresql'  )}
+${green     ('mongodb-ts     mongodb'  )}`
 
 type ColorFunc = (str: string | number) => string;
 type Framework = {
@@ -64,6 +65,23 @@ const FRAMEWORKS: Framework[] = [
         name: "psql",
         display: "PostgreSQL + JavaScript",
         color: yellow,
+      },
+    ],
+  },
+  {
+    name: "mongo",
+    display: "MongoDB",
+    color: green,
+    variants: [
+      {
+        name: "mongo-ts",
+        display: "MongoDB + TypeScript",
+        color: blue,
+      },
+      {
+        name: "mongo",
+        display: "MongoDB + JavaScript",
+        color: green,
       },
     ],
   },
