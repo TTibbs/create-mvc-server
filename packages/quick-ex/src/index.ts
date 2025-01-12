@@ -33,7 +33,7 @@ Options:
   -t, --template NAME        use a specific template
 
 Available templates:
-${yellow    ('postgresql     vanilla'  )}`
+${yellow    ('postgresql-ts     postgresql'  )}`
 
 type ColorFunc = (str: string | number) => string;
 type Framework = {
@@ -67,7 +67,6 @@ const FRAMEWORKS: Framework[] = [
       },
     ],
   },
-  // Add more frameworks and variants here if needed
 ];
 
 const TEMPLATES = FRAMEWORKS.map((f) => f.variants.map((v) => v.name)).reduce(

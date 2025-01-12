@@ -1,5 +1,6 @@
 {
-  "name": "@quick-ex-db/monorepo",
+  "name": "quick-ex-db",
+  "private": false,
   "version": "1.0.0",
   "description": "A CLI tool to quickly scaffold an Express.js server with a database",
   "scripts": {
