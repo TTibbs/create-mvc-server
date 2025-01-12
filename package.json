@@ -1,7 +1,7 @@
 {
   "name": "quick-ex-db",
   "private": false,
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A CLI tool to quickly scaffold an Express.js server with a database",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
