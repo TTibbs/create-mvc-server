@@ -24,6 +24,8 @@
   },
   "homepage": "https://cexpgs.vercel.app/",
   "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/mongoose": "^5.11.96",
     "@types/node": "^22.10.5",
     "typescript": "^5.7.3"
   }
