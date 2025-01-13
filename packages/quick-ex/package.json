@@ -33,7 +33,7 @@
     "jest",
     "scaffolding"
   ],
-  "author": "Terry Ward <tward5824@gmail.com>",
+  "author": "TTibbs <wtibbs@proton.me>",
   "license": "MIT",
   "description": "A CLI tool to quickly scaffold an Express.js app with PostgreSQL and Jest.",
   "repository": {
