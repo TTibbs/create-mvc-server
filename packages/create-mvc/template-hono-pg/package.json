@@ -1,0 +1,18 @@
+{
+  "name": "hono-app",
+  "version": "1.0.0",
+  "main": "listener.js",
+  "scripts": {
+    "start": "node listener.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "add_your_name_here",
+  "license": "ISC",
+  "type": "commonjs",
+  "description": "",
+  "dependencies": {
+    "hono": "^4.6.16",
+    "pg": "^8.13.1"
+  }
+}

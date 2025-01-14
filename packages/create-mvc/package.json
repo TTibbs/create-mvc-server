@@ -1,0 +1,54 @@
+{
+  "name": "create-mvc-server",
+  "version": "1.0.0",
+  "main": "./dist/index.js",
+  "type": "module",
+  "bin": {
+    "create-mvc-server": "./index.js"
+  },
+  "author": "TTibbs <wtibbs@proton.me>",
+  "license": "MIT",
+  "description": "A CLI tool to quickly scaffold a server with a database of your choice",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TTibbs/create-mvc-server.git",
+    "directory": "packages/create-mvc"
+  },
+  "homepage": "https://quick-ex-db-fe.vercel.app/",
+  "bugs": {
+    "url": "https://github.com/TTibbs/create-mvc-server/issues"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node ./dist/index.js",
+    "test": "jest"
+  },
+  "keywords": [
+    "cli",
+    "server",
+    "database",
+    "scaffolding"
+  ],
+  "dependencies": {
+    "@types/pg": "^8.11.10",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "inquirer": "^12.3.1",
+    "mysql2": "^3.12.0",
+    "pg": "^8.13.1"
+  },
+  "devDependencies": {
+    "@types/cross-spawn": "^6.0.6",
+    "@types/minimist": "^1.2.5",
+    "@types/prompts": "^2.4.9",
+    "cross-spawn": "^7.0.6",
+    "minimist": "^1.2.8",
+    "picocolors": "^1.1.1",
+    "prompts": "^2.4.2",
+    "supertest": "^7.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.3",
+    "unbuild": "^3.2.0",
+    "vitest": "^2.1.8"
+  }
+}
