@@ -1,32 +1,33 @@
 {
-  "name": "quick-ex-db",
+  "name": "create-mvc-server",
   "private": false,
-  "version": "1.0.4",
-  "description": "A CLI tool to quickly scaffold an Express.js server with a database",
+  "version": "1.0.0",
+  "type": "module",
+  "author": "TTibbs <wtibbs@proton.me>",
+  "license": "MIT",
+  "description": "A CLI tool to quickly scaffold a server with a database of your choice",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TTibbs/create-mvc-server.git"
+  },
+  "homepage": "https://quick-ex-db-fe.vercel.app/",
+  "bugs": {
+    "url": "https://github.com/TTibbs/create-mvc-server/issues"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/TTibbs/quick-ex-db.git"
-  },
   "keywords": [
-    "backend",
+    "cli",
+    "server",
     "database",
-    "express",
-    "server"
+    "scaffolding"
   ],
-  "author": "TTibbs <wtibbs@proton.me>",
-  "license": "MIT",
-  "type": "module",
-  "bugs": {
-    "url": "https://github.com/TTibbs/quick-ex-db/issues"
-  },
-  "homepage": "https://quick-ex-db-fe.vercel.app/",
   "devDependencies": {
     "@types/express": "^5.0.0",
     "@types/mongoose": "^5.11.96",
     "@types/node": "^22.10.5",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.8"
   }
 }

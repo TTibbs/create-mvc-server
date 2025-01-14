@@ -1,4 +1,4 @@
-# quick-ex-db
+# create-mvc-server
 
 A CLI tool to quickly scaffold an Express.js app with different database options.
 
@@ -7,7 +7,7 @@ A CLI tool to quickly scaffold an Express.js app with different database options
 To install this package globally, run:
 
 ```bash
-npm install -g quick-ex-db
+npm install -g create-mvc-server
 ```
 
 ## Usage
@@ -15,7 +15,7 @@ npm install -g quick-ex-db
 After installation, you can create a new Express app by running:
 
 ```bash
-npx quick-ex-db <project-name>
+npx create-mvc-server <project-name>
 ```
 
 ## PostgreSQL
@@ -460,7 +460,7 @@ If you find a bug or have a feature request, please create an issue on the GitHu
 2. Clone your forked repository:
 
 ```bash
-git clone https://github.com/<your-username>/quick-ex-db.git
+git clone https://github.com/<your-username>/create-mvc-server.git
 ```
 
 3. Create a new branch for your feature or bugfix:
