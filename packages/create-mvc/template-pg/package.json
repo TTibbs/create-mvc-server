@@ -22,12 +22,12 @@
     "test": "jest"
   },
   "dependencies": {
-    "express": "^4.21.1",
-    "pg": "^8.7.3",
-    "pg-format": "^1.0.4",
-    "dotenv": "^16.0.0",
     "cors": "^2.8.5",
-    "nodemon": "^3.1.7"
+    "dotenv": "^16.0.0",
+    "express": "^4.21.1",
+    "nodemon": "^3.1.7",
+    "pg": "^8.7.3",
+    "pg-format": "^1.0.4"
   },
   "devDependencies": {
     "jest": "^27.5.1",

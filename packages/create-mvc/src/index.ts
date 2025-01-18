@@ -3,15 +3,172 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import spawn from "cross-spawn";
 import minimist from "minimist";
 import prompts from "prompts";
 import colors from "picocolors";
 
-const { blue, red, reset, yellow, green, cyan, magenta } = colors;
+const {
+  red,
+  green,
+  greenBright,
+  blue,
+  blueBright,
+  cyan,
+  yellow,
+  magenta,
+  reset,
+} = colors;
 
-// Avoids autoconversion to number of the project name by defining that the args
-// non associated with an option ( _ ) needs to be parsed as a string. See #4606
+// Type definitions
+type ColorFunc = (str: string | number) => string;
+
+interface Option {
+  id: string;
+  display: string;
+  choices: { name: string; color: ColorFunc }[];
+}
+
+interface Template {
+  id: string;
+  requirements: Record<string, string>;
+  color: ColorFunc;
+}
+
+// Configuration object that defines all possible options
+const OPTIONS: Option[] = [
+  {
+    id: "server",
+    display: "Server Framework",
+    choices: [
+      { name: "Express", color: blue },
+      { name: "Hono", color: yellow },
+    ],
+  },
+  {
+    id: "database",
+    display: "Database",
+    choices: [
+      { name: "Postgres", color: blue },
+      { name: "MongoDB", color: green },
+      { name: "MySQL", color: magenta },
+      { name: "SQLite", color: cyan },
+    ],
+  },
+  {
+    id: "language",
+    display: "Language",
+    choices: [
+      { name: "JavaScript", color: yellow },
+      { name: "TypeScript", color: blue },
+    ],
+  },
+];
+
+// Define templates and their requirements
+const TEMPLATES: Template[] = [
+  {
+    id: "pg-ts",
+    requirements: {
+      server: "Express",
+      database: "Postgres",
+      language: "TypeScript",
+    },
+    color: blue,
+  },
+  {
+    id: "pg",
+    requirements: {
+      server: "Express",
+      database: "Postgres",
+      language: "JavaScript",
+    },
+    color: blueBright,
+  },
+  {
+    id: "mongo-ts",
+    requirements: {
+      server: "Express",
+      database: "MongoDB",
+      language: "TypeScript",
+    },
+    color: green,
+  },
+  {
+    id: "mongo",
+    requirements: {
+      server: "Express",
+      database: "MongoDB",
+      language: "JavaScript",
+    },
+    color: greenBright,
+  },
+  {
+    id: "mysql-ts",
+    requirements: {
+      server: "Express",
+      database: "MySQL",
+      language: "TypeScript",
+    },
+    color: magenta,
+  },
+  {
+    id: "mysql",
+    requirements: {
+      server: "Express",
+      database: "MySQL",
+      language: "JavaScript",
+    },
+    color: magenta,
+  },
+  {
+    id: "sqlite-ts",
+    requirements: {
+      server: "Express",
+      database: "SQLite",
+      language: "TypeScript",
+    },
+    color: cyan,
+  },
+  {
+    id: "sqlite",
+    requirements: {
+      server: "Express",
+      database: "SQLite",
+      language: "JavaScript",
+    },
+    color: cyan,
+  },
+  {
+    id: "hono-pg-ts",
+    requirements: {
+      server: "Hono",
+      database: "Postgres",
+      language: "TypeScript",
+    },
+    color: yellow,
+  },
+  {
+    id: "hono-pg",
+    requirements: {
+      server: "Hono",
+      database: "Postgres",
+      language: "JavaScript",
+    },
+    color: yellow,
+  },
+];
+
+// Helper function to find matching template based on selections
+function findMatchingTemplate(
+  selections: Record<string, string>
+): Template | undefined {
+  return TEMPLATES.find((template) => {
+    return Object.entries(template.requirements).every(
+      ([key, value]) => selections[key] === value
+    );
+  });
+}
+
 const argv = minimist<{
   template?: string;
   help?: boolean;
@@ -20,393 +177,198 @@ const argv = minimist<{
   alias: { h: "help", t: "template" },
   string: ["_"],
 });
-const cwd = process.cwd();
 
-// prettier-ignore
-const helpMessage = `\
-Usage: create-mvc-server [options] [project-name]
+// Generate help message dynamically based on available options
+function generateHelpMessage(): string {
+  const templateList = TEMPLATES.map((t) => `${t.color(t.id.padEnd(20))}`).join(
+    "\n"
+  );
 
-Create a new Express project in JavaScript or TypeScript.
+  return `Usage: create-mvc-server [options] [project-name]
+
+Create a new project with your chosen configuration.
 With no arguments, start the CLI in interactive mode.
 
 Options:
   -t, --template NAME        use a specific template
 
 Available templates:
-${yellow    ('postgresql-ts     postgresql'  )}
-${green     ('mongodb-ts     mongodb'  )}
-${cyan      ('sqlite-ts     sqlite'  )}
-${magenta   ('mysql-ts     mysql'  )}
-${blue      ('hono-psql-ts     hono-psql'  )}`
+${templateList}`;
+}
 
-type ColorFunc = (str: string | number) => string;
-type FrameworkVariant = {
-  name: string;
-  display: string;
-  color: ColorFunc;
-  customCommand?: string;
-};
-type Framework = {
-  server: string;
-  name: string;
-  display: string;
-  color: ColorFunc;
-  variants: FrameworkVariant[];
-};
-
-const FRAMEWORKS: Framework[] = [
-  {
-    server: "express",
-    name: "pg",
-    display: "Postgres",
-    color: yellow,
-    variants: [
-      {
-        name: "pg-ts",
-        display: "Use TypeScript",
-        color: blue,
-      },
-      {
-        name: "pg",
-        display: "Use JavaScript",
-        color: yellow,
-      },
-    ],
-  },
-  {
-    server: "express",
-    name: "mongo",
-    display: "MongoDB",
-    color: green,
-    variants: [
-      {
-        name: "mongo-ts",
-        display: "Use TypeScript",
-        color: blue,
-      },
-      {
-        name: "mongo",
-        display: "Use JavaScript",
-        color: green,
-      },
-    ],
-  },
-  {
-    server: "express",
-    name: "sqlite",
-    display: "SQLite",
-    color: cyan,
-    variants: [
-      {
-        name: "sqlite-ts",
-        display: "Use TypeScript",
-        color: blue,
-      },
-      {
-        name: "sqlite",
-        display: "Use JavaScript",
-        color: cyan,
-      },
-    ],
-  },
-  {
-    server: "express",
-    name: "mysql",
-    display: "MySQL",
-    color: magenta,
-    variants: [
-      {
-        name: "mysql-ts",
-        display: "Use TypeScript",
-        color: blue,
-      },
-      {
-        name: "mysql",
-        display: "Use JavaScript",
-        color: magenta,
-      },
-    ],
-  },
-  {
-    server: "hono",
-    name: "hono-pg",
-    display: "Postgres",
-    color: blue,
-    variants: [
-      {
-        name: "hono-pg-ts",
-        display: "Use TypeScript",
-        color: blue,
-      },
-      {
-        name: "hono-pg",
-        display: "Use JavaScript",
-        color: yellow,
-      },
-    ],
-  },
-];
-
-const TEMPLATES = FRAMEWORKS.map((f) => f.variants.map((v) => v.name)).reduce(
-  (a, b) => a.concat(b),
-  []
-);
-
+const defaultTargetDir = "mvc-server";
 const renameFiles: Record<string, string | undefined> = {
   _gitignore: ".gitignore",
 };
 
-const defaultTargetDir = "express-project";
-
-async function init() {
+export async function init() {
   const argTargetDir = formatTargetDir(argv._[0]);
   const argTemplate = argv.template || argv.t;
 
-  const help = argv.help;
-  if (help) {
-    console.log(helpMessage);
+  if (argv.help) {
+    console.log(generateHelpMessage());
     return;
+  }
+
+  // Early validation of template argument
+  if (argTemplate) {
+    const templateExists = TEMPLATES.some((t) => t.id === argTemplate);
+    if (!templateExists) {
+      console.error(red(`Template "${argTemplate}" not found.`));
+      console.log("Available templates:");
+      TEMPLATES.forEach((t) => console.log(`  ${t.color(t.id)}`));
+      process.exit(1);
+    }
   }
 
   let targetDir = argTargetDir || defaultTargetDir;
   const getProjectName = () => path.basename(path.resolve(targetDir));
 
-  let result: prompts.Answers<
-    | "server"
-    | "projectName"
-    | "overwrite"
-    | "packageName"
-    | "serverFramework"
-    | "variant"
-  >;
+  // If template is provided, extract its requirements
 
-  prompts.override({
-    overwrite: argv.overwrite,
-  });
+  // Build prompts dynamically based on OPTIONS
+  const questions: prompts.PromptObject[] = [
+    {
+      type: argTargetDir ? null : "text",
+      name: "projectName",
+      message: reset("Project name:"),
+      initial: defaultTargetDir,
+      onState: (state) => {
+        targetDir = formatTargetDir(state.value) || defaultTargetDir;
+      },
+    },
+    // Directory overwrite prompt
+    {
+      type: () =>
+        !fs.existsSync(targetDir) || isEmpty(targetDir) ? null : "select",
+      name: "overwrite",
+      message: () =>
+        `${
+          targetDir === "."
+            ? "Current directory"
+            : `Target directory "${targetDir}"`
+        } is not empty. Please choose how to proceed:`,
+      choices: [
+        { title: "Cancel operation", value: "no" },
+        { title: "Remove existing files and continue", value: "yes" },
+        { title: "Ignore files and continue", value: "ignore" },
+      ],
+    },
+    // Package name prompt if needed
+    {
+      type: () => (isValidPackageName(getProjectName()) ? null : "text"),
+      name: "packageName",
+      message: reset("Package name:"),
+      initial: () => toValidPackageName(getProjectName()),
+      validate: (dir) => isValidPackageName(dir) || "Invalid package.json name",
+    },
+  ];
+
+  // Add option prompts only if no template is specified
+  if (!argTemplate) {
+    OPTIONS.forEach((option) => {
+      questions.push({
+        type: "select",
+        name: option.id,
+        message: reset(`Select ${option.display}:`),
+        choices: option.choices.map((choice) => ({
+          title: choice.color(choice.name),
+          value: choice.name,
+        })),
+      });
+    });
+  }
 
   try {
-    result = await prompts(
-      [
-        {
-          type: argTargetDir ? null : "text",
-          name: "projectName",
-          message: reset("Project name:"),
-          initial: defaultTargetDir,
-          onState: (state) => {
-            targetDir = formatTargetDir(state.value) || defaultTargetDir;
-          },
-        },
-        {
-          type: "select",
-          name: "server",
-          message: reset("Select a server:"),
-          choices: [
-            { title: "Express", value: "express" },
-            { title: "Hono", value: "hono" },
-          ],
-        },
-        {
-          type: () =>
-            !fs.existsSync(targetDir) || isEmpty(targetDir) ? null : "select",
-          name: "overwrite",
-          message: () =>
-            (targetDir === "."
-              ? "Current directory"
-              : `Target directory "${targetDir}"`) +
-            ` is not empty. Please choose how to proceed:`,
-          initial: 0,
-          choices: [
-            {
-              title: "Cancel operation",
-              value: "no",
-            },
-            {
-              title: "Remove existing files and continue",
-              value: "yes",
-            },
-            {
-              title: "Ignore files and continue",
-              value: "ignore",
-            },
-          ],
-        },
-        {
-          type: (_, { overwrite }: { overwrite?: string }) => {
-            if (overwrite === "no") {
-              throw new Error(red("✖") + " Operation cancelled");
-            }
-            return null;
-          },
-          name: "overwriteChecker",
-        },
-        {
-          type: () => (isValidPackageName(getProjectName()) ? null : "text"),
-          name: "packageName",
-          message: reset("Package name:"),
-          initial: () => toValidPackageName(getProjectName()),
-          validate: (dir) =>
-            isValidPackageName(dir) || "Invalid package.json name",
-        },
-        {
-          type: (prev, values) =>
-            argTemplate && TEMPLATES.includes(argTemplate) ? null : "select",
-          name: "serverFramework",
-          message:
-            typeof argTemplate === "string" && !TEMPLATES.includes(argTemplate)
-              ? reset(
-                  `"${argTemplate}" isn't a valid template. Please choose from below: `
-                )
-              : reset("Select a database:"),
-          initial: 0,
-          choices: (prev, values) =>
-            FRAMEWORKS.filter((f) => f.server === values.server).map(
-              (framework) => {
-                const frameworkColor = framework.color;
-                return {
-                  title: frameworkColor(framework.display || framework.name),
-                  value: framework,
-                };
-              }
-            ),
-        },
-        {
-          type: (framework: Framework | /* package name */ string) =>
-            typeof framework === "object" ? "select" : null,
-          name: "variant",
-          message: reset("Select a variant:"),
-          choices: (framework: Framework) =>
-            framework.variants.map((variant) => {
-              const variantColor = variant.color;
-              return {
-                title: variantColor(variant.display || variant.name),
-                value: variant.name,
-              };
-            }),
-        },
-      ],
-      {
-        onCancel: () => {
-          throw new Error(red("✖") + " Operation cancelled");
-        },
-      }
+    const result = await prompts(questions, {
+      onCancel: () => {
+        throw new Error(red("✖") + " Operation cancelled");
+      },
+    });
+
+    const { overwrite, packageName } = result;
+
+    // If template was provided via argument, use it directly
+    // Otherwise, find matching template based on user selections
+    const template = argTemplate
+      ? TEMPLATES.find((t) => t.id === argTemplate)
+      : findMatchingTemplate(result);
+
+    if (!template) {
+      throw new Error(
+        "No matching template found for the selected configuration"
+      );
+    }
+
+    // Rest of your existing code for scaffolding the project
+    const root = path.join(process.cwd(), targetDir);
+
+    if (overwrite === "yes") {
+      emptyDir(root);
+    } else if (!fs.existsSync(root)) {
+      fs.mkdirSync(root, { recursive: true });
+    }
+
+    const templateDir = path.resolve(
+      fileURLToPath(import.meta.url),
+      "../../",
+      `template-${template.id}`
     );
+
+    // Copy template files
+    const write = (file: string, content?: string) => {
+      const targetPath = path.join(root, renameFiles[file] ?? file);
+      if (content) {
+        fs.writeFileSync(targetPath, content);
+      } else {
+        copy(path.join(templateDir, file), targetPath);
+      }
+    };
+
+    const files = fs.readdirSync(templateDir);
+    for (const file of files.filter((f) => f !== "package.json")) {
+      write(file);
+    }
+
+    // Update package.json
+    const pkg = JSON.parse(
+      fs.readFileSync(path.join(templateDir, `package.json`), "utf-8")
+    );
+
+    pkg.name = packageName || getProjectName();
+    write("package.json", JSON.stringify(pkg, null, 2) + "\n");
+
+    // Print final instructions
+    const cdProjectName = path.relative(process.cwd(), root);
+    console.log(`\nDone. Now run:\n`);
+    if (root !== process.cwd()) {
+      console.log(
+        `  cd ${
+          cdProjectName.includes(" ") ? `"${cdProjectName}"` : cdProjectName
+        }`
+      );
+    }
+
+    const pkgInfo = pkgFromUserAgent(process.env.npm_config_user_agent);
+    const pkgManager = pkgInfo ? pkgInfo.name : "npm";
+
+    switch (pkgManager) {
+      case "yarn":
+        console.log("  yarn");
+        break;
+      default:
+        console.log(`  ${pkgManager} install`);
+        break;
+    }
+    console.log();
   } catch (cancelled: any) {
     console.log(cancelled.message);
     return;
   }
-
-  // user choice associated with prompts
-  const { serverFramework, overwrite, packageName, variant } = result;
-
-  const root = path.join(cwd, targetDir);
-
-  if (overwrite === "yes") {
-    emptyDir(root);
-  } else if (!fs.existsSync(root)) {
-    fs.mkdirSync(root, { recursive: true });
-  }
-
-  // determine template
-  let template: string = variant || serverFramework?.name || argTemplate;
-
-  const pkgInfo = pkgFromUserAgent(process.env.npm_config_user_agent);
-  const pkgManager = pkgInfo ? pkgInfo.name : "npm";
-  const isYarn1 = pkgManager === "yarn" && pkgInfo?.version.startsWith("1.");
-
-  const { customCommand } =
-    FRAMEWORKS.flatMap((f) => f.variants).find((v) => v.name === template) ??
-    {};
-
-  if (customCommand) {
-    const fullCustomCommand = customCommand
-      .replace(/^npm create /, () => {
-        // `bun create` uses it's own set of templates,
-        // the closest alternative is using `bun x` directly on the package
-        if (pkgManager === "bun") {
-          return "bun x create-";
-        }
-        return `${pkgManager} create `;
-      })
-      // Only Yarn 1.x doesn't support `@version` in the `create` command
-      .replace("@latest", () => (isYarn1 ? "" : "@latest"))
-      .replace(/^npm exec/, () => {
-        // Prefer `pnpm dlx`, `yarn dlx`, or `bun x`
-        if (pkgManager === "pnpm") {
-          return "pnpm dlx";
-        }
-        if (pkgManager === "yarn" && !isYarn1) {
-          return "yarn dlx";
-        }
-        if (pkgManager === "bun") {
-          return "bun x";
-        }
-        // Use `npm exec` in all other cases,
-        // including Yarn 1.x and other custom npm clients.
-        return "npm exec";
-      });
-
-    const [command, ...args] = fullCustomCommand.split(" ");
-    // we replace TARGET_DIR here because targetDir may include a space
-    const replacedArgs = args.map((arg) =>
-      arg.replace("TARGET_DIR", () => targetDir)
-    );
-    const { status } = spawn.sync(command, replacedArgs, {
-      stdio: "inherit",
-    });
-    process.exit(status ?? 0);
-  }
-
-  console.log(`\nScaffolding project in ${root}...`);
-
-  const templateDir = path.resolve(
-    fileURLToPath(import.meta.url),
-    "../../",
-    `template-${template}`
-  );
-
-  const write = (file: string, content?: string) => {
-    const targetPath = path.join(root, renameFiles[file] ?? file);
-    if (content) {
-      fs.writeFileSync(targetPath, content);
-    } else {
-      copy(path.join(templateDir, file), targetPath);
-    }
-  };
-
-  const files = fs.readdirSync(templateDir);
-  for (const file of files.filter((f) => f !== "package.json")) {
-    write(file);
-  }
-
-  const pkg = JSON.parse(
-    fs.readFileSync(path.join(templateDir, `package.json`), "utf-8")
-  );
-
-  pkg.name = packageName || getProjectName();
-
-  write("package.json", JSON.stringify(pkg, null, 2) + "\n");
-
-  const cdProjectName = path.relative(cwd, root);
-  console.log(`\nDone. Now run:\n`);
-  if (root !== cwd) {
-    console.log(
-      `  cd ${
-        cdProjectName.includes(" ") ? `"${cdProjectName}"` : cdProjectName
-      }`
-    );
-  }
-  switch (pkgManager) {
-    case "yarn":
-      console.log("  yarn");
-      break;
-    default:
-      console.log(`  ${pkgManager} install`);
-      break;
-  }
-  console.log();
 }
 
-function formatTargetDir(targetDir: string | undefined) {
+// Your existing helper functions remain the same
+export function formatTargetDir(targetDir: string | undefined) {
   return targetDir?.trim().replace(/\/+$/g, "");
 }
 
@@ -419,7 +381,7 @@ function copy(src: string, dest: string) {
   }
 }
 
-function isValidPackageName(projectName: string) {
+export function isValidPackageName(projectName: string) {
   return /^(?:@[a-z\d\-*~][a-z\d\-*._~]*\/)?[a-z\d\-~][a-z\d\-._~]*$/.test(
     projectName
   );
@@ -434,7 +396,7 @@ function toValidPackageName(projectName: string) {
     .replace(/[^a-z\d\-~]+/g, "-");
 }
 
-function copyDir(srcDir: string, destDir: string) {
+export function copyDir(srcDir: string, destDir: string) {
   fs.mkdirSync(destDir, { recursive: true });
   for (const file of fs.readdirSync(srcDir)) {
     const srcFile = path.resolve(srcDir, file);
@@ -444,8 +406,10 @@ function copyDir(srcDir: string, destDir: string) {
 }
 
 function isEmpty(path: string) {
-  const files = fs.readdirSync(path);
-  return files.length === 0 || (files.length === 1 && files[0] === ".git");
+  return (
+    fs.readdirSync(path).length === 0 ||
+    (fs.readdirSync(path).length === 1 && fs.readdirSync(path)[0] === ".git")
+  );
 }
 
 function emptyDir(dir: string) {

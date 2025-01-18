@@ -3,6 +3,13 @@
   "private": false,
   "version": "1.0.0",
   "type": "module",
+  "files": [
+    "packages/create-mvc/dist",
+    "packages/create-mvc/index.js",
+    "packages/create-mvc/template-*/**",
+    "packages/create-mvc/README.md",
+    "packages/create-mvc/package.json"
+  ],
   "author": "TTibbs <wtibbs@proton.me>",
   "license": "MIT",
   "description": "A CLI tool to quickly scaffold a server with a database of your choice",
@@ -10,7 +17,7 @@
     "type": "git",
     "url": "git+https://github.com/TTibbs/create-mvc-server.git"
   },
-  "homepage": "https://quick-ex-db-fe.vercel.app/",
+  "homepage": "https://create-mvc-server.vercel.app/",
   "bugs": {
     "url": "https://github.com/TTibbs/create-mvc-server/issues"
   },

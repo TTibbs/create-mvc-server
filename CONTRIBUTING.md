@@ -29,7 +29,7 @@ All types of contributions are encouraged and valued. See the [Table of Contents
 
 ## I Have a Question
 
-> If you want to ask a question, we assume that you have read the available [Documentation](https://quick-ex-db-fe.vercel.app/).
+> If you want to ask a question, we assume that you have read the available [Documentation](https://create-mvc-server.vercel.app/).
 
 Before you ask a question, it is best to search for existing [Issues](https://github.com/TTibbs/create-mvc-server/issues) that might help you. In case you have found a suitable issue and still need clarification, you can write your question in this issue. It is also advisable to search the internet for answers first.
 
