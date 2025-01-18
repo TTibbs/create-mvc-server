@@ -1,6 +1,6 @@
 {
   "name": "hono-app",
-  "version": "1.0.1",
+  "version": "1.0.0",
   "main": "listener.js",
   "scripts": {
     "start": "node listener.js",
