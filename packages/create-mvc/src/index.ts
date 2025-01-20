@@ -3,6 +3,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { execSync } from "node:child_process";
 import minimist from "minimist";
 import prompts from "prompts";
 import colors from "picocolors";
@@ -22,17 +23,17 @@ const {
 // Type definitions
 type ColorFunc = (str: string | number) => string;
 
-interface Option {
+type Option = {
   id: string;
   display: string;
   choices: { name: string; color: ColorFunc }[];
-}
+};
 
-interface Template {
+type Template = {
   id: string;
   requirements: Record<string, string>;
   color: ColorFunc;
-}
+};
 
 // Configuration object that defines all possible options
 const OPTIONS: Option[] = [
@@ -262,6 +263,11 @@ export async function init() {
       initial: () => toValidPackageName(getProjectName()),
       validate: (dir) => isValidPackageName(dir) || "Invalid package.json name",
     },
+    {
+      type: "confirm",
+      name: "initGit",
+      message: reset("Initialise a git repository?"),
+    },
   ];
 
   // Add option prompts only if no template is specified
@@ -286,7 +292,7 @@ export async function init() {
       },
     });
 
-    const { overwrite, packageName } = result;
+    const { overwrite, packageName, initGit } = result;
 
     // If template was provided via argument, use it directly
     // Otherwise, find matching template based on user selections
@@ -324,6 +330,13 @@ export async function init() {
         copy(path.join(templateDir, file), targetPath);
       }
     };
+
+    // Initialise git repository
+    if (initGit) {
+      execSync("git init", { stdio: "inherit", cwd: targetDir });
+      execSync("git branch -M main", { stdio: "inherit", cwd: targetDir });
+      console.log("Initialised git repository");
+    }
 
     const files = fs.readdirSync(templateDir);
     for (const file of files.filter((f) => f !== "package.json")) {
