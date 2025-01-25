@@ -3,10 +3,10 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { execSync } from "node:child_process";
 import minimist from "minimist";
 import prompts from "prompts";
 import colors from "picocolors";
+import { execSync } from "child_process";
 
 const {
   red,
@@ -33,6 +33,11 @@ type Template = {
   id: string;
   requirements: Record<string, string>;
   color: ColorFunc;
+};
+
+type ValidationResult = {
+  isValid: boolean;
+  errors: string[];
 };
 
 // Configuration object that defines all possible options
@@ -170,6 +175,36 @@ function findMatchingTemplate(
   });
 }
 
+// Helper function to validate a template
+function validateTemplate(template: Template): ValidationResult {
+  const errors: string[] = [];
+  if (!template.id) errors.push("Template ID is required");
+  if (!template.requirements) errors.push("Template requirements are required");
+
+  OPTIONS.forEach((option) => {
+    if (!template.requirements[option.id]) {
+      errors.push(`Missing requirements for ${option.id}`);
+    }
+  });
+
+  return {
+    isValid: errors.length === 0,
+    errors,
+  };
+}
+
+// Validate all templates
+TEMPLATES.forEach((template) => {
+  const validResult = validateTemplate(template);
+  if (!validResult.isValid) {
+    console.warn(
+      `Template ${template.id} has validation errors:`,
+      validResult.errors
+    );
+  }
+});
+
+// Parse command line arguments
 const argv = minimist<{
   template?: string;
   help?: boolean;
@@ -191,20 +226,42 @@ Create a new project with your chosen configuration.
 With no arguments, start the CLI in interactive mode.
 
 Options:
-  -t, --template NAME        use a specific template
+  -t, --template NAME        Use a specific template
+  -h, --help                 Display this help message
 
 Available templates:
 ${templateList}`;
 }
 
+// Default target directory
 const defaultTargetDir = "mvc-server";
 const renameFiles: Record<string, string | undefined> = {
   _gitignore: ".gitignore",
 };
 
-export async function init() {
+// Check Node.js version
+async function checkNodeVersion(
+  requiredVersion: string = "14.0.0"
+): Promise<boolean> {
+  const currentVersion = process.versions.node;
+  const semver = currentVersion.split(".").map(Number);
+  const required = requiredVersion.split(".").map(Number);
+
+  for (let i = 0; i < 3; i++) {
+    if (semver[i] > required[i]) return true;
+    if (semver[i] < required[i]) return false;
+  }
+  return true;
+}
+
+// Main function to initialise the project
+async function init() {
   const argTargetDir = formatTargetDir(argv._[0]);
   const argTemplate = argv.template || argv.t;
+  if (!(await checkNodeVersion())) {
+    console.error(red("✖ Node.js 14.0.0 or higher is required"));
+    process.exit(1);
+  }
 
   if (argv.help) {
     console.log(generateHelpMessage());
@@ -321,13 +378,26 @@ export async function init() {
       `template-${template.id}`
     );
 
+    if (!fs.existsSync(templateDir)) {
+      throw new Error(`Template ${template.id} not found`);
+    }
+
+    console.log(`\n${green("✔")} Creating project in ${blue(root)}`);
+
     // Copy template files
     const write = (file: string, content?: string) => {
-      const targetPath = path.join(root, renameFiles[file] ?? file);
-      if (content) {
-        fs.writeFileSync(targetPath, content);
-      } else {
-        copy(path.join(templateDir, file), targetPath);
+      try {
+        const targetPath = path.join(root, renameFiles[file] ?? file);
+        if (content) {
+          fs.writeFileSync(targetPath, content);
+          console.log(`${green("✔")} Created ${blue(targetPath)}`);
+        } else {
+          copy(path.join(templateDir, file), targetPath);
+          console.log(`${green("✔")} Created ${blue(targetPath)}`);
+        }
+      } catch (error: any) {
+        console.error(`${red("✖")} Failed to write ${file}: ${error.message}`);
+        throw error;
       }
     };
 
@@ -380,8 +450,8 @@ export async function init() {
   }
 }
 
-// Your existing helper functions remain the same
-export function formatTargetDir(targetDir: string | undefined) {
+// Helper functions
+function formatTargetDir(targetDir: string | undefined) {
   return targetDir?.trim().replace(/\/+$/g, "");
 }
 
@@ -394,12 +464,14 @@ function copy(src: string, dest: string) {
   }
 }
 
-export function isValidPackageName(projectName: string) {
+// Validate package name
+function isValidPackageName(projectName: string) {
   return /^(?:@[a-z\d\-*~][a-z\d\-*._~]*\/)?[a-z\d\-~][a-z\d\-._~]*$/.test(
     projectName
   );
 }
 
+// Convert project name to valid package name
 function toValidPackageName(projectName: string) {
   return projectName
     .trim()
@@ -409,7 +481,8 @@ function toValidPackageName(projectName: string) {
     .replace(/[^a-z\d\-~]+/g, "-");
 }
 
-export function copyDir(srcDir: string, destDir: string) {
+// Copy directory
+function copyDir(srcDir: string, destDir: string) {
   fs.mkdirSync(destDir, { recursive: true });
   for (const file of fs.readdirSync(srcDir)) {
     const srcFile = path.resolve(srcDir, file);
@@ -418,6 +491,7 @@ export function copyDir(srcDir: string, destDir: string) {
   }
 }
 
+// Check if directory is empty
 function isEmpty(path: string) {
   return (
     fs.readdirSync(path).length === 0 ||
@@ -425,6 +499,7 @@ function isEmpty(path: string) {
   );
 }
 
+// Empty directory
 function emptyDir(dir: string) {
   if (!fs.existsSync(dir)) {
     return;
@@ -437,6 +512,7 @@ function emptyDir(dir: string) {
   }
 }
 
+// Parse package manager from user agent
 function pkgFromUserAgent(userAgent: string | undefined) {
   if (!userAgent) return undefined;
   const pkgSpec = userAgent.split(" ")[0];
