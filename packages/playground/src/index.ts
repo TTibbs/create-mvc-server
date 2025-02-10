@@ -2,7 +2,6 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import minimist from "minimist";
 import prompts from "prompts";
 import colors from "picocolors";
@@ -40,6 +39,320 @@ type ValidationResult = {
   errors: string[];
 };
 
+type CommonFiles = {
+  gitignore: string;
+  readme: string;
+  app: Map<string, string>;
+  packageJson: PackageJsonTemplate;
+};
+
+type PackageJsonTemplate = {
+  base: Record<string, any>;
+  dependencies: Record<string, Record<string, string>>;
+  devDependencies: Record<string, Record<string, string>>;
+};
+
+class TemplateBuilder {
+  private commonFiles: CommonFiles;
+  private database: string;
+  private language: string;
+  private server: string;
+
+  constructor(selections: Record<string, string>) {
+    this.database = selections.database;
+    this.language = selections.language;
+    this.server = selections.server;
+    this.commonFiles = this.loadCommonFiles();
+  }
+
+  private loadCommonFiles(): CommonFiles {
+    return {
+      gitignore: `
+  node_modules/
+  .env.*
+  dist/
+  .DS_Store
+  `,
+      readme: this.generateReadme(),
+      app: this.generateAppFile(),
+      packageJson: this.generatePackageJson(),
+    };
+  }
+
+  private generatePackageJson(): PackageJsonTemplate {
+    const base = {
+      version: "1.0.0",
+      scripts: {
+        start:
+          this.language === "TypeScript"
+            ? "ts-node src/server.ts"
+            : "node src/server.js",
+        test: "jest",
+        build: this.language === "TypeScript" ? "tsc" : 'echo "No build step"',
+      },
+    };
+
+    const dependencies = {
+      common: {
+        dotenv: "^16.4.7",
+      },
+      Express: {
+        express: "^4.21.2",
+      },
+      Hono: {
+        hono: "^4.6.16",
+      },
+      PostgreSQL: {
+        pg: "^8.11.10",
+      },
+      MongoDB: {
+        mongoose: "^7.8.3",
+      },
+      MySQL: {
+        mysql2: "^3.12.0",
+      },
+      SQLite: {
+        sqlite3: "^5.1.7",
+      },
+    };
+
+    const devDependencies = {
+      TypeScript: {
+        typescript: "^5.7.3",
+        "@types/node": "^22.10.5",
+        "ts-node": "^10.9.2",
+      },
+    };
+
+    return { base, dependencies, devDependencies };
+  }
+
+  private generateReadme(): string {
+    return `# ${this.database} ${this.server} Project
+    
+A web server built with ${this.server}, ${this.database}, and ${this.language}.
+
+## Getting Started
+
+1. Install dependencies: \`npm install\`
+2. Start the server: \`npm start\`
+`;
+  }
+
+  private generateAppFile(): Map<string, string> {
+    const files = new Map<string, string>();
+    const ext = this.language === "TypeScript" ? "ts" : "js";
+
+    // Generate app file content based on server framework
+    const appContent =
+      this.server === "Express"
+        ? `import express${
+            this.language === "TypeScript" ? ", { Express }" : ""
+          } from 'express';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const app${this.language === "TypeScript" ? ": Express" : ""} = express();
+
+app.use(express.json());
+
+app.get('/', (req, res) => {
+  res.send('Hello World!');
+});
+
+export default app;`
+        : `import { Hono } from 'hono';
+
+const app = new Hono();
+
+app.get('/', (c) => c.text('Hello World!'));
+
+export default app;`;
+
+    // Generate listener file content
+    const listenerContent =
+      this.server === "Express"
+        ? `import app from './app';
+
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+  console.log(\`Server listening on port \${PORT}\`);
+});`
+        : `import app from './app';
+
+const PORT = process.env.PORT || 3000;
+
+Deno.serve({ port: PORT }, app.fetch);`;
+
+    files.set(`src/app.${ext}`, appContent);
+    files.set(`src/server.${ext}`, listenerContent);
+
+    return files;
+  }
+
+  private async getDatabaseFiles(): Promise<Map<string, string>> {
+    const files = new Map<string, string>();
+    const ext = this.language === "TypeScript" ? "ts" : "js";
+
+    if (this.database === "PostgreSQL") {
+      // PostgreSQL-specific folder structure
+      files.set(
+        `db/setup.sql`,
+        `DROP DATABASE IF EXISTS database_name;
+CREATE DATABASE database_name;
+
+\\c database_name;
+
+CREATE TABLE example (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(100) NOT NULL
+);`
+      );
+
+      files.set(
+        `db/connection.${ext}`,
+        `import { Pool ${
+          this.language === "TypeScript" ? ", PoolConfig" : ""
+        } } from 'pg';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const config${this.language === "TypeScript" ? ": PoolConfig" : ""} = {
+  connectionString: process.env.DATABASE_URL
+};
+
+export default new Pool(config);`
+      );
+
+      files.set(
+        `db/seeds/seed.${ext}`,
+        `import db from '../connection';
+
+export const seed = async (data) => {
+  // Add seeding logic here
+};`
+      );
+
+      files.set(
+        `db/seeds/run-seed.${ext}`,
+        `import devData from '../data/dev-data';
+import { seed } from './seed';
+
+const runSeed = () => {
+  return seed(devData);
+};
+
+runSeed();`
+      );
+
+      files.set(
+        `db/data/dev-data/index.${ext}`,
+        `export default {
+  // Add development data here
+};`
+      );
+
+      files.set(
+        `db/data/test-data/index.${ext}`,
+        `export default {
+  // Add test data here
+};`
+      );
+    } else {
+      // Other databases keep the original config/database structure
+      files.set(
+        `config/database.${ext}`,
+        generateDatabaseConfig(this.database, this.language)
+      );
+    }
+
+    return files;
+  }
+
+  public async buildTemplate(): Promise<Map<string, string>> {
+    const files = new Map<string, string>();
+
+    // Add common files
+    files.set(".gitignore", this.commonFiles.gitignore);
+    files.set("README.md", this.commonFiles.readme);
+
+    // Add database-specific files
+    const dbFiles = await this.getDatabaseFiles();
+    for (const [path, content] of dbFiles) {
+      files.set(path, content);
+    }
+
+    // Add language-specific files
+    if (this.language === "TypeScript") {
+      files.set("tsconfig.json", this.generateTsConfig());
+    }
+
+    return files;
+  }
+
+  private generateTsConfig(): string {
+    return `{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "CommonJS",
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules"]
+}`;
+  }
+}
+
+function generateDatabaseConfig(database: string, language: string): string {
+  const isTS = language === "TypeScript";
+
+  const configs: Record<string, string> = {
+    PostgreSQL: `
+  import { Pool ${isTS ? ", PoolConfig" : ""}} from 'pg';
+  import dotenv from 'dotenv';
+  
+  dotenv.config();
+  
+  const config${isTS ? ": PoolConfig" : ""} = {
+    connectionString: process.env.DATABASE_URL
+  };
+  
+  export default new Pool(config);
+  `,
+    MongoDB: `
+  import mongoose from 'mongoose';
+  import dotenv from 'dotenv';
+  
+  dotenv.config();
+  
+  const connectDB = async () => {
+    try {
+      await mongoose.connect(process.env.MONGODB_URI${
+        isTS ? " as string" : ""
+      });
+      console.log('MongoDB connected');
+    } catch (error) {
+      console.error('MongoDB connection error:', error);
+      process.exit(1);
+    }
+  };
+  
+  export default connectDB;
+  `,
+    // Add other database configurations...
+  };
+
+  return configs[database] || "";
+}
+
 // Configuration object that defines all possible options
 const OPTIONS: Option[] = [
   {
@@ -54,7 +367,7 @@ const OPTIONS: Option[] = [
     id: "database",
     display: "Database",
     choices: [
-      { name: "Postgres", color: blue },
+      { name: "PostgreSQL", color: blue },
       { name: "MongoDB", color: green },
       { name: "MySQL", color: magenta },
       { name: "SQLite", color: cyan },
@@ -76,7 +389,7 @@ const TEMPLATES: Template[] = [
     id: "pg-ts",
     requirements: {
       server: "Express",
-      database: "Postgres",
+      database: "PostgreSQL",
       language: "TypeScript",
     },
     color: blue,
@@ -85,7 +398,7 @@ const TEMPLATES: Template[] = [
     id: "pg",
     requirements: {
       server: "Express",
-      database: "Postgres",
+      database: "PostgreSQL",
       language: "JavaScript",
     },
     color: blueBright,
@@ -148,7 +461,7 @@ const TEMPLATES: Template[] = [
     id: "hono-pg-ts",
     requirements: {
       server: "Hono",
-      database: "Postgres",
+      database: "PostgreSQL",
       language: "TypeScript",
     },
     color: yellow,
@@ -157,23 +470,12 @@ const TEMPLATES: Template[] = [
     id: "hono-pg",
     requirements: {
       server: "Hono",
-      database: "Postgres",
+      database: "PostgreSQL",
       language: "JavaScript",
     },
     color: yellow,
   },
 ];
-
-// Helper function to find matching template based on selections
-function findMatchingTemplate(
-  selections: Record<string, string>
-): Template | undefined {
-  return TEMPLATES.find((template) => {
-    return Object.entries(template.requirements).every(
-      ([key, value]) => selections[key] === value
-    );
-  });
-}
 
 // Helper function to validate a template
 function validateTemplate(template: Template): ValidationResult {
@@ -235,9 +537,6 @@ ${templateList}`;
 
 // Default target directory
 const defaultTargetDir = "mvc-server";
-const renameFiles: Record<string, string | undefined> = {
-  _gitignore: ".gitignore",
-};
 
 // Check Node.js version
 async function checkNodeVersion(
@@ -281,8 +580,6 @@ async function init() {
 
   let targetDir = argTargetDir || defaultTargetDir;
   const getProjectName = () => path.basename(path.resolve(targetDir));
-
-  // If template is provided, extract its requirements
 
   // Build prompts dynamically based on OPTIONS
   const questions: prompts.PromptObject[] = [
@@ -351,11 +648,17 @@ async function init() {
 
     const { overwrite, packageName, initGit } = result;
 
-    // If template was provided via argument, use it directly
-    // Otherwise, find matching template based on user selections
-    const template = argTemplate
-      ? TEMPLATES.find((t) => t.id === argTemplate)
-      : findMatchingTemplate(result);
+    // Find matching template based on user selections or argument
+    let template: Template | undefined;
+    if (argTemplate) {
+      template = TEMPLATES.find((t) => t.id === argTemplate);
+    } else {
+      template = TEMPLATES.find((t) => {
+        return OPTIONS.every(
+          (option) => t.requirements[option.id] === result[option.id]
+        );
+      });
+    }
 
     if (!template) {
       throw new Error(
@@ -363,43 +666,31 @@ async function init() {
       );
     }
 
-    // Rest of your existing code for scaffolding the project
-    const root = path.join(process.cwd(), targetDir);
+    const templateBuilder = new TemplateBuilder({
+      database: template.requirements.database,
+      language: template.requirements.language,
+      server: template.requirements.server,
+      projectName: packageName || getProjectName(),
+    });
+    const generatedFiles = await templateBuilder.buildTemplate();
 
+    // Create root directory first
+    const root = path.join(process.cwd(), targetDir);
     if (overwrite === "yes") {
       emptyDir(root);
     } else if (!fs.existsSync(root)) {
       fs.mkdirSync(root, { recursive: true });
     }
 
-    const templateDir = path.resolve(
-      fileURLToPath(import.meta.url),
-      "../../",
-      `template-${template.id}`
-    );
-
-    if (!fs.existsSync(templateDir)) {
-      throw new Error(`Template ${template.id} not found`);
-    }
-
-    console.log(`\n${green("✔")} Creating project in ${blue(root)}`);
-
-    // Copy template files
-    const write = (file: string, content?: string) => {
-      try {
-        const targetPath = path.join(root, renameFiles[file] ?? file);
-        if (content) {
-          fs.writeFileSync(targetPath, content);
-          console.log(`${green("✔")} Created ${blue(targetPath)}`);
-        } else {
-          copy(path.join(templateDir, file), targetPath);
-          console.log(`${green("✔")} Created ${blue(targetPath)}`);
-        }
-      } catch (error: any) {
-        console.error(`${red("✖")} Failed to write ${file}: ${error.message}`);
-        throw error;
+    // Write files, ensuring parent directories exist
+    for (const [file, content] of generatedFiles) {
+      const filePath = path.join(root, file);
+      const dir = path.dirname(filePath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
       }
-    };
+      fs.writeFileSync(filePath, content);
+    }
 
     // Initialise git repository
     if (initGit) {
@@ -407,19 +698,6 @@ async function init() {
       execSync("git branch -M main", { stdio: "inherit", cwd: targetDir });
       console.log("Initialised git repository");
     }
-
-    const files = fs.readdirSync(templateDir);
-    for (const file of files.filter((f) => f !== "package.json")) {
-      write(file);
-    }
-
-    // Update package.json
-    const pkg = JSON.parse(
-      fs.readFileSync(path.join(templateDir, `package.json`), "utf-8")
-    );
-
-    pkg.name = packageName || getProjectName();
-    write("package.json", JSON.stringify(pkg, null, 2) + "\n");
 
     // Print final instructions
     const cdProjectName = path.relative(process.cwd(), root);
@@ -524,7 +802,5 @@ function pkgFromUserAgent(userAgent: string | undefined) {
 }
 
 init().catch((e) => {
-  console.error(red("Error during initialization:"));
   console.error(e);
-  process.exit(1);
 });
