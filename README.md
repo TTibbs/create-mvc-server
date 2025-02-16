@@ -29,19 +29,19 @@ You can use the tool in two ways:
 1. **Interactive Mode**
 
 ```bash
-npx create-mvc-server
+npx create-mvc
 ```
 
 2. **Template Mode**
 
 ```bash
-npx create-mvc-server --template <template-name>
+npx create-mvc --template <template-name>
 ```
 
 #### Command Line Options
 
 ```bash
-Usage: create-mvc-server [options] [project-name]
+Usage: create-mvc [options] [project-name]
 
 Options:
   -t, --template NAME        Use a specific template
@@ -89,10 +89,10 @@ The generated project will include:
 
 ```bash
 # Create a new project with interactive prompts
-npx create-mvc-server my-server
+npx create-mvc my-server
 
 # Create a new project using a specific template
-npx create-mvc-server my-server --template pg-ts
+npx create-mvc my-server --template pg-ts
 ```
 
 After project creation, follow the printed instructions to:
