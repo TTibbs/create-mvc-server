@@ -1,7 +1,7 @@
 {
   "name": "create-mvc-server",
   "private": false,
-  "version": "1.0.5",
+  "version": "1.0.6",
   "type": "module",
   "files": [
     "packages/create-mvc/dist",
