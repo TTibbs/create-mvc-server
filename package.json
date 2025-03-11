@@ -1,7 +1,7 @@
 {
   "name": "create-mvc-server",
   "private": false,
-  "version": "1.0.7",
+  "version": "1.0.8",
   "type": "module",
   "bin": {
     "create-mvc-server": "./packages/create-mvc/index.js",
