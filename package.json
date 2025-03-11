@@ -4,7 +4,6 @@
   "version": "1.0.9",
   "type": "module",
   "bin": {
-    "create-mvc-server": "./packages/create-mvc/index.js",
     "create-mvc": "./packages/create-mvc/index.js"
   },
   "files": [
