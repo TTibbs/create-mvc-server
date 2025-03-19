@@ -2,10 +2,14 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import minimist from "minimist";
-import prompts from "prompts";
+import prompts, { PromptObject } from "prompts";
 import colors from "picocolors";
-import { execSync } from "child_process";
+// Add new imports for enhanced UI
+import ora from "ora";
+import boxen from "boxen";
+import figures from "figures";
 
 const {
   red,
@@ -17,6 +21,7 @@ const {
   yellow,
   magenta,
   reset,
+  bold, // Added for better headers and emphasis
 } = colors;
 
 // Type definitions
@@ -39,320 +44,6 @@ type ValidationResult = {
   errors: string[];
 };
 
-type CommonFiles = {
-  gitignore: string;
-  readme: string;
-  app: Map<string, string>;
-  packageJson: PackageJsonTemplate;
-};
-
-type PackageJsonTemplate = {
-  base: Record<string, any>;
-  dependencies: Record<string, Record<string, string>>;
-  devDependencies: Record<string, Record<string, string>>;
-};
-
-class TemplateBuilder {
-  private commonFiles: CommonFiles;
-  private database: string;
-  private language: string;
-  private server: string;
-
-  constructor(selections: Record<string, string>) {
-    this.database = selections.database;
-    this.language = selections.language;
-    this.server = selections.server;
-    this.commonFiles = this.loadCommonFiles();
-  }
-
-  private loadCommonFiles(): CommonFiles {
-    return {
-      gitignore: `
-  node_modules/
-  .env.*
-  dist/
-  .DS_Store
-  `,
-      readme: this.generateReadme(),
-      app: this.generateAppFile(),
-      packageJson: this.generatePackageJson(),
-    };
-  }
-
-  private generatePackageJson(): PackageJsonTemplate {
-    const base = {
-      version: "1.0.0",
-      scripts: {
-        start:
-          this.language === "TypeScript"
-            ? "ts-node src/server.ts"
-            : "node src/server.js",
-        test: "jest",
-        build: this.language === "TypeScript" ? "tsc" : 'echo "No build step"',
-      },
-    };
-
-    const dependencies = {
-      common: {
-        dotenv: "^16.4.7",
-      },
-      Express: {
-        express: "^4.21.2",
-      },
-      Hono: {
-        hono: "^4.6.16",
-      },
-      PostgreSQL: {
-        pg: "^8.11.10",
-      },
-      MongoDB: {
-        mongoose: "^7.8.3",
-      },
-      MySQL: {
-        mysql2: "^3.12.0",
-      },
-      SQLite: {
-        sqlite3: "^5.1.7",
-      },
-    };
-
-    const devDependencies = {
-      TypeScript: {
-        typescript: "^5.7.3",
-        "@types/node": "^22.10.5",
-        "ts-node": "^10.9.2",
-      },
-    };
-
-    return { base, dependencies, devDependencies };
-  }
-
-  private generateReadme(): string {
-    return `# ${this.database} ${this.server} Project
-    
-A web server built with ${this.server}, ${this.database}, and ${this.language}.
-
-## Getting Started
-
-1. Install dependencies: \`npm install\`
-2. Start the server: \`npm start\`
-`;
-  }
-
-  private generateAppFile(): Map<string, string> {
-    const files = new Map<string, string>();
-    const ext = this.language === "TypeScript" ? "ts" : "js";
-
-    // Generate app file content based on server framework
-    const appContent =
-      this.server === "Express"
-        ? `import express${
-            this.language === "TypeScript" ? ", { Express }" : ""
-          } from 'express';
-import dotenv from 'dotenv';
-
-dotenv.config();
-
-const app${this.language === "TypeScript" ? ": Express" : ""} = express();
-
-app.use(express.json());
-
-app.get('/', (req, res) => {
-  res.send('Hello World!');
-});
-
-export default app;`
-        : `import { Hono } from 'hono';
-
-const app = new Hono();
-
-app.get('/', (c) => c.text('Hello World!'));
-
-export default app;`;
-
-    // Generate listener file content
-    const listenerContent =
-      this.server === "Express"
-        ? `import app from './app';
-
-const PORT = process.env.PORT || 3000;
-
-app.listen(PORT, () => {
-  console.log(\`Server listening on port \${PORT}\`);
-});`
-        : `import app from './app';
-
-const PORT = process.env.PORT || 3000;
-
-Deno.serve({ port: PORT }, app.fetch);`;
-
-    files.set(`src/app.${ext}`, appContent);
-    files.set(`src/server.${ext}`, listenerContent);
-
-    return files;
-  }
-
-  private async getDatabaseFiles(): Promise<Map<string, string>> {
-    const files = new Map<string, string>();
-    const ext = this.language === "TypeScript" ? "ts" : "js";
-
-    if (this.database === "PostgreSQL") {
-      // PostgreSQL-specific folder structure
-      files.set(
-        `db/setup.sql`,
-        `DROP DATABASE IF EXISTS database_name;
-CREATE DATABASE database_name;
-
-\\c database_name;
-
-CREATE TABLE example (
-  id SERIAL PRIMARY KEY,
-  name VARCHAR(100) NOT NULL
-);`
-      );
-
-      files.set(
-        `db/connection.${ext}`,
-        `import { Pool ${
-          this.language === "TypeScript" ? ", PoolConfig" : ""
-        } } from 'pg';
-import dotenv from 'dotenv';
-
-dotenv.config();
-
-const config${this.language === "TypeScript" ? ": PoolConfig" : ""} = {
-  connectionString: process.env.DATABASE_URL
-};
-
-export default new Pool(config);`
-      );
-
-      files.set(
-        `db/seeds/seed.${ext}`,
-        `import db from '../connection';
-
-export const seed = async (data) => {
-  // Add seeding logic here
-};`
-      );
-
-      files.set(
-        `db/seeds/run-seed.${ext}`,
-        `import devData from '../data/dev-data';
-import { seed } from './seed';
-
-const runSeed = () => {
-  return seed(devData);
-};
-
-runSeed();`
-      );
-
-      files.set(
-        `db/data/dev-data/index.${ext}`,
-        `export default {
-  // Add development data here
-};`
-      );
-
-      files.set(
-        `db/data/test-data/index.${ext}`,
-        `export default {
-  // Add test data here
-};`
-      );
-    } else {
-      // Other databases keep the original config/database structure
-      files.set(
-        `config/database.${ext}`,
-        generateDatabaseConfig(this.database, this.language)
-      );
-    }
-
-    return files;
-  }
-
-  public async buildTemplate(): Promise<Map<string, string>> {
-    const files = new Map<string, string>();
-
-    // Add common files
-    files.set(".gitignore", this.commonFiles.gitignore);
-    files.set("README.md", this.commonFiles.readme);
-
-    // Add database-specific files
-    const dbFiles = await this.getDatabaseFiles();
-    for (const [path, content] of dbFiles) {
-      files.set(path, content);
-    }
-
-    // Add language-specific files
-    if (this.language === "TypeScript") {
-      files.set("tsconfig.json", this.generateTsConfig());
-    }
-
-    return files;
-  }
-
-  private generateTsConfig(): string {
-    return `{
-  "compilerOptions": {
-    "target": "ES2020",
-    "module": "CommonJS",
-    "outDir": "./dist",
-    "rootDir": "./src",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true
-  },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules"]
-}`;
-  }
-}
-
-function generateDatabaseConfig(database: string, language: string): string {
-  const isTS = language === "TypeScript";
-
-  const configs: Record<string, string> = {
-    PostgreSQL: `
-  import { Pool ${isTS ? ", PoolConfig" : ""}} from 'pg';
-  import dotenv from 'dotenv';
-  
-  dotenv.config();
-  
-  const config${isTS ? ": PoolConfig" : ""} = {
-    connectionString: process.env.DATABASE_URL
-  };
-  
-  export default new Pool(config);
-  `,
-    MongoDB: `
-  import mongoose from 'mongoose';
-  import dotenv from 'dotenv';
-  
-  dotenv.config();
-  
-  const connectDB = async () => {
-    try {
-      await mongoose.connect(process.env.MONGODB_URI${
-        isTS ? " as string" : ""
-      });
-      console.log('MongoDB connected');
-    } catch (error) {
-      console.error('MongoDB connection error:', error);
-      process.exit(1);
-    }
-  };
-  
-  export default connectDB;
-  `,
-    // Add other database configurations...
-  };
-
-  return configs[database] || "";
-}
-
 // Configuration object that defines all possible options
 const OPTIONS: Option[] = [
   {
@@ -367,7 +58,7 @@ const OPTIONS: Option[] = [
     id: "database",
     display: "Database",
     choices: [
-      { name: "PostgreSQL", color: blue },
+      { name: "Postgres", color: blue },
       { name: "MongoDB", color: green },
       { name: "MySQL", color: magenta },
       { name: "SQLite", color: cyan },
@@ -389,7 +80,7 @@ const TEMPLATES: Template[] = [
     id: "pg-ts",
     requirements: {
       server: "Express",
-      database: "PostgreSQL",
+      database: "Postgres",
       language: "TypeScript",
     },
     color: blue,
@@ -398,7 +89,7 @@ const TEMPLATES: Template[] = [
     id: "pg",
     requirements: {
       server: "Express",
-      database: "PostgreSQL",
+      database: "Postgres",
       language: "JavaScript",
     },
     color: blueBright,
@@ -461,7 +152,7 @@ const TEMPLATES: Template[] = [
     id: "hono-pg-ts",
     requirements: {
       server: "Hono",
-      database: "PostgreSQL",
+      database: "Postgres",
       language: "TypeScript",
     },
     color: yellow,
@@ -470,12 +161,101 @@ const TEMPLATES: Template[] = [
     id: "hono-pg",
     requirements: {
       server: "Hono",
-      database: "PostgreSQL",
+      database: "Postgres",
       language: "JavaScript",
     },
     color: yellow,
   },
 ];
+
+// Default target directory
+const defaultTargetDir = "mvc-server";
+const renameFiles: Record<string, string | undefined> = {
+  _gitignore: ".gitignore",
+};
+
+// UI Helper Functions
+function displayHeader(title: string, color: ColorFunc = cyan) {
+  const width = 50;
+  console.log(`${color("┌─")}${color("─".repeat(width - 4))}${color("─┐")}`);
+  console.log(
+    `${color("│")} ${bold(title)}${" ".repeat(width - title.length - 4)}${color(
+      "│"
+    )}`
+  );
+  console.log(`${color("└─")}${color("─".repeat(width - 4))}${color("─┘")}`);
+}
+
+function displayTemplateMatrix() {
+  // Create headers for the table
+  const headers = `${"Server".padEnd(12)}${"Database".padEnd(
+    12
+  )}${"Language".padEnd(12)}${"Template".padEnd(15)}`;
+  const separator = "-".repeat(50);
+
+  // Build table rows for each template
+  const rows = TEMPLATES.map(
+    (t) =>
+      `${blue(t.requirements.server.padEnd(12))}${green(
+        t.requirements.database.padEnd(12)
+      )}${yellow(t.requirements.language.padEnd(12))}${t.color(
+        t.id.padEnd(15)
+      )}`
+  ).join("\n");
+
+  // Display in a box
+  console.log(
+    boxen(
+      `${bold(
+        "Available Templates"
+      )}\n${separator}\n${headers}\n${separator}\n${rows}`,
+      { padding: 1, borderColor: "white", borderStyle: "round" }
+    )
+  );
+}
+
+function showStep(step: number, totalSteps: number, description: string) {
+  console.log(
+    `\n${green(figures.pointer)} ${green(`Step ${step}/${totalSteps}:`)} ${bold(
+      description
+    )}\n`
+  );
+}
+
+// Helper function to find matching template based on selections
+function findMatchingTemplate(
+  selections: Record<string, string>
+): Template | undefined {
+  // Log the selections for debugging
+  console.log(
+    "Matching template for selections:",
+    JSON.stringify(selections, null, 2)
+  );
+
+  // Filter out undefined or null values
+  const cleanSelections: Record<string, string> = {};
+  Object.entries(selections).forEach(([key, value]) => {
+    if (value && OPTIONS.some((opt) => opt.id === key)) {
+      cleanSelections[key] = value;
+    }
+  });
+
+  // Check if we have all required selections
+  const hasAllRequiredSelections = OPTIONS.every(
+    (option) => cleanSelections[option.id] !== undefined
+  );
+
+  if (!hasAllRequiredSelections) {
+    console.log(red("Missing required selections"));
+    return undefined;
+  }
+
+  return TEMPLATES.find((template) => {
+    return Object.entries(template.requirements).every(
+      ([key, value]) => cleanSelections[key] === value
+    );
+  });
+}
 
 // Helper function to validate a template
 function validateTemplate(template: Template): ValidationResult {
@@ -535,9 +315,6 @@ Available templates:
 ${templateList}`;
 }
 
-// Default target directory
-const defaultTargetDir = "mvc-server";
-
 // Check Node.js version
 async function checkNodeVersion(
   requiredVersion: string = "14.0.0"
@@ -553,10 +330,26 @@ async function checkNodeVersion(
   return true;
 }
 
+// Helper function to determine package manager command
+function getPackageManagerCommand(userAgent: string | undefined) {
+  const pkgInfo = pkgFromUserAgent(userAgent);
+  const pkgManager = pkgInfo ? pkgInfo.name : "npm";
+
+  switch (pkgManager) {
+    case "yarn":
+      return "yarn";
+    case "pnpm":
+      return "pnpm install";
+    default:
+      return "npm install";
+  }
+}
+
 // Main function to initialise the project
 async function init() {
   const argTargetDir = formatTargetDir(argv._[0]);
   const argTemplate = argv.template || argv.t;
+
   if (!(await checkNodeVersion())) {
     console.error(red("✖ Node.js 14.0.0 or higher is required"));
     process.exit(1);
@@ -564,8 +357,20 @@ async function init() {
 
   if (argv.help) {
     console.log(generateHelpMessage());
+    // Add template matrix display for better help visualization
+    displayTemplateMatrix();
     return;
   }
+
+  // Show welcome message with a nice box
+  console.log(
+    boxen(bold(greenBright("MVC Server Generator")), {
+      padding: 1,
+      margin: 1,
+      borderColor: "green",
+      borderStyle: "double",
+    })
+  );
 
   // Early validation of template argument
   if (argTemplate) {
@@ -581,147 +386,312 @@ async function init() {
   let targetDir = argTargetDir || defaultTargetDir;
   const getProjectName = () => path.basename(path.resolve(targetDir));
 
-  // Build prompts dynamically based on OPTIONS
-  const questions: prompts.PromptObject[] = [
-    {
-      type: argTargetDir ? null : "text",
-      name: "projectName",
-      message: reset("Project name:"),
-      initial: defaultTargetDir,
-      onState: (state) => {
-        targetDir = formatTargetDir(state.value) || defaultTargetDir;
-      },
-    },
-    // Directory overwrite prompt
-    {
-      type: () =>
-        !fs.existsSync(targetDir) || isEmpty(targetDir) ? null : "select",
-      name: "overwrite",
-      message: () =>
-        `${
-          targetDir === "."
-            ? "Current directory"
-            : `Target directory "${targetDir}"`
-        } is not empty. Please choose how to proceed:`,
-      choices: [
-        { title: "Cancel operation", value: "no" },
-        { title: "Remove existing files and continue", value: "yes" },
-        { title: "Ignore files and continue", value: "ignore" },
-      ],
-    },
-    // Package name prompt if needed
-    {
-      type: () => (isValidPackageName(getProjectName()) ? null : "text"),
-      name: "packageName",
-      message: reset("Package name:"),
-      initial: () => toValidPackageName(getProjectName()),
-      validate: (dir) => isValidPackageName(dir) || "Invalid package.json name",
-    },
-    {
-      type: "confirm",
-      name: "initGit",
-      message: reset("Initialise a git repository?"),
-    },
-  ];
+  try {
+    displayHeader("CONFIGURATION OPTIONS", cyan);
 
-  // Add option prompts only if no template is specified
-  if (!argTemplate) {
-    OPTIONS.forEach((option) => {
-      questions.push({
-        type: "select",
+    // Break down the prompts into two phases for better flow control
+    let result: any = {};
+
+    // First phase: Get selection mode
+    showStep(1, 4, "Project configuration");
+
+    // Only ask for selection mode if no template is specified via arguments
+    let selectionMode = "custom"; // default
+    if (!argTemplate) {
+      const modeResult = await prompts(
+        {
+          type: "select",
+          name: "selectionMode",
+          message: reset("How would you like to configure your project?"),
+          choices: [
+            {
+              title: `${greenBright(
+                figures.radioOn
+              )} Choose individual components`,
+              value: "custom",
+            },
+            {
+              title: `${blueBright(
+                figures.radioOn
+              )} Select from available templates`,
+              value: "template",
+            },
+          ],
+        },
+        {
+          onCancel: () => {
+            throw new Error(red("✖") + " Operation cancelled");
+          },
+        }
+      );
+
+      selectionMode = modeResult.selectionMode;
+    }
+    result.selectionMode = selectionMode;
+
+    // Get template choice if template mode is selected
+    if (selectionMode === "template") {
+      const templateResult = await prompts(
+        {
+          type: "select",
+          name: "templateChoice",
+          message: reset("Select a template:"),
+          choices: TEMPLATES.map((t) => ({
+            title: `${t.color(t.id)} (${t.requirements.server} + ${
+              t.requirements.database
+            } + ${t.requirements.language})`,
+            value: t.id,
+          })),
+        },
+        {
+          onCancel: () => {
+            throw new Error(red("✖") + " Operation cancelled");
+          },
+        }
+      );
+
+      result.templateChoice = templateResult.templateChoice;
+    }
+
+    // Get project name and handle directory
+    if (!argTargetDir) {
+      const projectResult = await prompts(
+        {
+          type: "text",
+          name: "projectName",
+          message: reset("Project name:"),
+          initial: defaultTargetDir,
+          onState: (state: any) => {
+            targetDir = formatTargetDir(state.value) || defaultTargetDir;
+          },
+        },
+        {
+          onCancel: () => {
+            throw new Error(red("✖") + " Operation cancelled");
+          },
+        }
+      );
+
+      result.projectName = projectResult.projectName;
+    }
+
+    // Handle directory overwrite if needed
+    if (fs.existsSync(targetDir) && !isEmpty(targetDir)) {
+      const overwriteResult = await prompts(
+        {
+          type: "select",
+          name: "overwrite",
+          message: `${
+            targetDir === "."
+              ? "Current directory"
+              : `Target directory "${targetDir}"`
+          } is not empty. Please choose how to proceed:`,
+          choices: [
+            { title: "Cancel operation", value: "no" },
+            { title: "Remove existing files and continue", value: "yes" },
+            { title: "Ignore files and continue", value: "ignore" },
+          ],
+        },
+        {
+          onCancel: () => {
+            throw new Error(red("✖") + " Operation cancelled");
+          },
+        }
+      );
+
+      result.overwrite = overwriteResult.overwrite;
+      if (result.overwrite === "no") {
+        throw new Error(red("✖") + " Operation cancelled");
+      }
+    }
+
+    // Check package name validity
+    if (!isValidPackageName(getProjectName())) {
+      const packageResult = await prompts(
+        {
+          type: "text",
+          name: "packageName",
+          message: reset("Package name:"),
+          initial: toValidPackageName(getProjectName()),
+          validate: (dir: string) =>
+            isValidPackageName(dir) || "Invalid package.json name",
+        },
+        {
+          onCancel: () => {
+            throw new Error(red("✖") + " Operation cancelled");
+          },
+        }
+      );
+
+      result.packageName = packageResult.packageName;
+    }
+
+    // Second phase: Component selection (only if custom mode is selected)
+    if (result.selectionMode === "custom") {
+      showStep(2, 4, "Component Selection");
+
+      const componentPrompts: PromptObject[] = OPTIONS.map((option) => ({
+        type: "select" as const,
         name: option.id,
         message: reset(`Select ${option.display}:`),
         choices: option.choices.map((choice) => ({
-          title: choice.color(choice.name),
+          title: `${choice.color(figures.radioOn)} ${choice.color(
+            choice.name
+          )}`,
           value: choice.name,
         })),
+        hint: "(Use arrow keys and Enter to select)",
+      }));
+
+      const componentSelections = await prompts(componentPrompts, {
+        onCancel: () => {
+          throw new Error(red("✖") + " Operation cancelled");
+        },
       });
-    });
-  }
 
-  try {
-    const result = await prompts(questions, {
-      onCancel: () => {
-        throw new Error(red("✖") + " Operation cancelled");
-      },
-    });
-
-    const { overwrite, packageName, initGit } = result;
-
-    // Find matching template based on user selections or argument
-    let template: Template | undefined;
-    if (argTemplate) {
-      template = TEMPLATES.find((t) => t.id === argTemplate);
-    } else {
-      template = TEMPLATES.find((t) => {
-        return OPTIONS.every(
-          (option) => t.requirements[option.id] === result[option.id]
-        );
-      });
+      Object.assign(result, componentSelections);
     }
+
+    const { overwrite, packageName } = result;
+
+    showStep(3, 4, "Preparing project structure");
+
+    // If template was provided via argument, use it directly
+    // Otherwise, find matching template based on user selections or direct template choice
+    const template = argTemplate
+      ? TEMPLATES.find((t) => t.id === argTemplate)
+      : result.selectionMode === "template" && result.templateChoice
+      ? TEMPLATES.find((t) => t.id === result.templateChoice)
+      : result.selectionMode === "custom"
+      ? findMatchingTemplate({
+          server: result.server,
+          database: result.database,
+          language: result.language,
+        })
+      : null;
 
     if (!template) {
-      throw new Error(
-        "No matching template found for the selected configuration"
-      );
+      console.log("\n");
+      if (result.selectionMode === "custom") {
+        console.error(red("No matching template found for your selections."));
+        console.log("Available combinations:");
+        displayTemplateMatrix();
+      } else if (result.selectionMode === "template") {
+        console.error(red("No valid template was selected."));
+        console.log("Available templates:");
+        TEMPLATES.forEach((t) => console.log(`  ${t.color(t.id)}`));
+      } else {
+        console.error(
+          red("No matching template found for the selected configuration")
+        );
+      }
+      process.exit(1);
     }
 
-    const templateBuilder = new TemplateBuilder({
-      database: template.requirements.database,
-      language: template.requirements.language,
-      server: template.requirements.server,
-      projectName: packageName || getProjectName(),
-    });
-    const generatedFiles = await templateBuilder.buildTemplate();
+    // Show configuration summary with a nice boxed display
+    console.log(
+      "\n" +
+        boxen(
+          `${bold("Your selections:")}\n
+${blue(figures.bullet)} Server: ${template.requirements.server}
+${green(figures.bullet)} Database: ${template.requirements.database}
+${yellow(figures.bullet)} Language: ${template.requirements.language}
 
-    // Create root directory first
+${bold("Template:")} ${template.color(template.id)}`,
+          { padding: 1, margin: 1, borderStyle: "round", borderColor: "cyan" }
+        )
+    );
+
+    // Add a confirmation step for better UX
+    const confirmation = await prompts({
+      type: "confirm",
+      name: "proceed",
+      message: "Proceed with this configuration?",
+      initial: true,
+    });
+
+    if (!confirmation.proceed) {
+      throw new Error(red("✖") + " Operation cancelled");
+    }
+
+    // Project scaffolding part
     const root = path.join(process.cwd(), targetDir);
+
     if (overwrite === "yes") {
       emptyDir(root);
     } else if (!fs.existsSync(root)) {
       fs.mkdirSync(root, { recursive: true });
     }
 
-    // Write files, ensuring parent directories exist
-    for (const [file, content] of generatedFiles) {
-      const filePath = path.join(root, file);
-      const dir = path.dirname(filePath);
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-      }
-      fs.writeFileSync(filePath, content);
+    const templateDir = path.resolve(
+      fileURLToPath(import.meta.url),
+      "../../",
+      `template-${template.id}`
+    );
+
+    if (!fs.existsSync(templateDir)) {
+      throw new Error(`Template ${template.id} not found`);
     }
 
-    // Initialise git repository
-    if (initGit) {
-      execSync("git init", { stdio: "inherit", cwd: targetDir });
-      execSync("git branch -M main", { stdio: "inherit", cwd: targetDir });
-      console.log("Initialised git repository");
+    showStep(3.5, 4, "Creating project files");
+
+    // Start a spinner for file operations
+    const spinner = ora(`Creating project in ${blue(root)}`).start();
+
+    // Copy template files
+    const write = (file: string, content?: string) => {
+      try {
+        const targetPath = path.join(root, renameFiles[file] ?? file);
+        if (content) {
+          fs.writeFileSync(targetPath, content);
+        } else {
+          copy(path.join(templateDir, file), targetPath);
+        }
+      } catch (error: any) {
+        spinner.fail(`Failed to write ${file}: ${error.message}`);
+        throw error;
+      }
+    };
+
+    const files = fs.readdirSync(templateDir);
+    for (const file of files.filter((f) => f !== "package.json")) {
+      write(file);
     }
+
+    // Update package.json
+    const pkg = JSON.parse(
+      fs.readFileSync(path.join(templateDir, `package.json`), "utf-8")
+    );
+
+    pkg.name = packageName || getProjectName();
+    write("package.json", JSON.stringify(pkg, null, 2) + "\n");
+
+    spinner.succeed("Project created successfully!");
 
     // Print final instructions
+    showStep(4, 4, "Finalizing setup");
+
     const cdProjectName = path.relative(process.cwd(), root);
-    console.log(`\nDone. Now run:\n`);
-    if (root !== process.cwd()) {
-      console.log(
-        `  cd ${
-          cdProjectName.includes(" ") ? `"${cdProjectName}"` : cdProjectName
-        }`
-      );
-    }
 
-    const pkgInfo = pkgFromUserAgent(process.env.npm_config_user_agent);
-    const pkgManager = pkgInfo ? pkgInfo.name : "npm";
-
-    switch (pkgManager) {
-      case "yarn":
-        console.log("  yarn");
-        break;
-      default:
-        console.log(`  ${pkgManager} install`);
-        break;
-    }
-    console.log();
+    // Show next steps in a nice box
+    console.log(
+      boxen(
+        `${bold(greenBright("Success!"))} Project is ready.\n
+${bold("Next steps:")}\n` +
+          (root !== process.cwd()
+            ? `${cyan(figures.pointer)} cd ${
+                cdProjectName.includes(" ")
+                  ? `"${cdProjectName}"`
+                  : cdProjectName
+              }\n`
+            : "") +
+          `${cyan(figures.pointer)} ${getPackageManagerCommand(
+            process.env.npm_config_user_agent
+          )}\n` +
+          `${cyan(figures.pointer)} Optional: Initialize git with 'git init'`,
+        { padding: 1, margin: 1, borderStyle: "round", borderColor: "green" }
+      )
+    );
   } catch (cancelled: any) {
     console.log(cancelled.message);
     return;
@@ -802,5 +772,7 @@ function pkgFromUserAgent(userAgent: string | undefined) {
 }
 
 init().catch((e) => {
+  console.error(red("Error during initialization:"));
   console.error(e);
+  process.exit(1);
 });

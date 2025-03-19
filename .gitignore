@@ -2,3 +2,5 @@ node_modules/
 dist/
 dev/
 .DS_Store
+improvements.md
+notes.md
