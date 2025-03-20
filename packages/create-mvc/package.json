@@ -1,9 +1,9 @@
 {
-  "name": "create-mvc",
-  "version": "1.1.0",
+  "name": "create-mvc-server",
+  "version": "1.1.1",
   "type": "module",
   "bin": {
-    "create-mvc": "./dist/index.js"
+    "create-mvc-server": "./dist/index.js"
   },
   "files": [
     "dist",

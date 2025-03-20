@@ -1,10 +1,10 @@
 {
   "name": "create-mvc-server",
   "private": false,
-  "version": "1.1.0",
+  "version": "1.1.1",
   "type": "module",
   "bin": {
-    "create-mvc": "./packages/create-mvc/index.js"
+    "create-mvc-server": "./packages/create-mvc/index.js"
   },
   "files": [
     "packages/create-mvc/dist",
