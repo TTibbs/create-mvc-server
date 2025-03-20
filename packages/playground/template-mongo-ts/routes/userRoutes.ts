@@ -1,27 +1,30 @@
-import express, { Router } from "express";
+// routes/userRoutes.ts
+import express from "express";
 import {
+  registerUser,
+  loginUser,
+  getUserProfile,
+  updateUserProfile,
   getUsers,
-  createUser,
+  getUserById,
   updateUser,
   deleteUser,
 } from "../controllers/userController";
+import { protect, admin } from "../middleware/authMiddleware";
 
-const router: Router = express.Router();
+const router = express.Router();
 
-// @route GET /api/users
-// @desc Get all users
-router.get("/", getUsers);
-
-// @route POST /api/users
-// @desc Create a new user
-router.post("/", createUser);
-
-// @route PUT /api/users/:id
-// @desc Update a user
-router.put("/:id", updateUser);
-
-// @route DELETE /api/users/:id
-// @desc Delete a user
-router.delete("/:id", deleteUser);
+router.post("/", registerUser);
+router.post("/login", loginUser);
+router
+  .route("/profile")
+  .get(protect, getUserProfile)
+  .put(protect, updateUserProfile);
+router.route("/").get(protect, admin, getUsers);
+router
+  .route("/:id")
+  .get(protect, admin, getUserById)
+  .put(protect, admin, updateUser)
+  .delete(protect, admin, deleteUser);
 
 export default router;

@@ -1,23 +1,31 @@
-import express, { Application, Request, Response } from "express";
+// app.ts
+import express, { Express } from "express";
 import dotenv from "dotenv";
+import cors from "cors";
+import morgan from "morgan";
+import { errorHandler, notFound } from "./middleware/errorMiddleware";
 import userRoutes from "./routes/userRoutes";
+import articleRoutes from "./routes/articleRoutes";
 
-// Load environment variables
 dotenv.config();
 
-// Initialize app
-const app: Application = express();
+const app: Express = express();
 
-// Middleware
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cors());
 
-// Routes
+if (process.env.NODE_ENV === "development") {
+  app.use(morgan("dev"));
+}
+
 app.use("/api/users", userRoutes);
-
-// Handle 404 errors
-app.use((req: Request, res: Response): void => {
-  res.status(404).json({ message: "Route not found" });
+app.use("/api/articles", articleRoutes);
+app.get("/", (req, res) => {
+  res.send("API is running...");
 });
 
-// Export the app instance
+app.use(notFound);
+app.use(errorHandler);
+
 export default app;
