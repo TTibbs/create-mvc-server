@@ -1,6 +1,7 @@
 node_modules/
 dist/
 dev/
+playground/
 .DS_Store
 improvements.md
 notes.md
