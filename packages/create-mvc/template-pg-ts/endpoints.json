@@ -6,9 +6,33 @@
     "description": "Returns an array of users with the username, name and avatar url",
     "exampleResponse": [
       {
-        "username": "10x engineer",
-        "name": "Theo"
+        "username": "bob123",
+        "name": "Bob"
       }
     ]
+  },
+  "GET /api/users/:id": {
+    "description": "Returns a user by ID",
+    "exampleResponse": {
+      "id": 1,
+      "username": "alice123",
+      "email": "alice@example.com"
+    }
+  },
+  "GET /api/users/username/:username": {
+    "description": "Returns a user by username",
+    "exampleResponse": {
+      "id": 1,
+      "username": "alice123",
+      "email": "alice@example.com"
+    }
+  },
+  "GET /api/users/email/:email": {
+    "description": "Returns a user by email",
+    "exampleResponse": {
+      "id": 1,
+      "username": "alice123",
+      "email": "alice@example.com"
+    }
   }
 }

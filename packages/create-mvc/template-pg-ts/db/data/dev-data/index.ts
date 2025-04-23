@@ -1,7 +1,5 @@
 import users from "./users";
 
-const testData = {
+export const devData = {
   users,
 };
-
-export default testData;

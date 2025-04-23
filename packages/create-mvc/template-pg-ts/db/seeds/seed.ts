@@ -1,29 +1,38 @@
 import db from "../connection";
-import data from "../data/test-data";
+import format from "pg-format";
+import { SeedData } from "../../types";
 
-const seed = async (data: any) => {
+const seed = async ({ users }: SeedData) => {
   try {
-    await db.query("BEGIN");
+    await db.query("DROP TABLE IF EXISTS users CASCADE");
+
+    // Create tables
+    await db.query(`
+      CREATE TABLE users (
+        id SERIAL PRIMARY KEY,
+        username TEXT NOT NULL UNIQUE,
+        email TEXT NOT NULL UNIQUE,
+        password TEXT NOT NULL,
+        profile_image_url TEXT,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+    `);
 
     // Insert users into the `users` table
-    const userInsertPromises = data.users.map(
-      (user: { name: string; email: string }) => {
-        return db.query(
-          "INSERT INTO users (name, email) VALUES ($1, $2) RETURNING *",
-          [user.name, user.email]
-        );
-      }
+    const insertUsersQueryString = format(
+      `INSERT INTO users (username, email, password, profile_image_url) VALUES %L RETURNING id`,
+      users.map((user) => [
+        user.username,
+        user.email,
+        user.password,
+        user.profile_image_url,
+      ])
     );
-    await Promise.all(userInsertPromises);
-
-    await db.query("COMMIT");
-    console.log("Database seeded successfully");
+    await db.query(insertUsersQueryString);
   } catch (err) {
-    await db.query("ROLLBACK");
     console.error("Error seeding database:", err);
   }
 };
-
-seed(data);
 
 export default seed;

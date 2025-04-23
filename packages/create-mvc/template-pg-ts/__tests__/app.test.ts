@@ -2,21 +2,24 @@ import app from "../app";
 import request from "supertest";
 import db from "../db/connection";
 import seed from "../db/seeds/seed";
-import data from "../db/data/test-data/index";
-import endpoints from "../endpoints.json";
+import { users } from "../db/data/test-data";
+import endpointsTest from "../endpoints.json";
 require("jest-sorted");
 
-beforeEach(() => seed(data));
+beforeEach(() => seed({ users }));
 afterAll(async () => {
   await db.end();
 });
 
 describe("Basic Express Server Tests", () => {
   test("GET / responds with 200 status and a message", async () => {
-    const response = await request(app).get("/");
-    expect(response.status).toBe(200);
-    expect(response.body).toEqual({ msg: "Welcome to the API!" });
+    const response = await request(app).get("/").expect(200);
+    expect(response.body).toEqual({ message: "Welcome to the API!" });
   });
-
-  // You can add more tests below as necessary
+  test("GET /api should return a list of endpoints", async () => {
+    const {
+      body: { endpoints },
+    } = await request(app).get("/api").expect(200);
+    expect(endpoints).toEqual(endpointsTest);
+  });
 });

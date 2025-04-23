@@ -17,29 +17,37 @@
   "scripts": {
     "start": "ts-node listener.ts",
     "build": "tsc",
-    "seed": "ts-node db/seeds/run-seed.ts"
+    "setup-dbs": "psql -f ./db/setup.sql",
+    "seed": "ts-node db/seeds/run-seed.ts",
+    "seed-prod": "NODE_ENV=production npm run seed",
+    "test": "jest --runInBand"
   },
   "dependencies": {
     "cors": "^2.8.5",
-    "dotenv": "^16.0.0",
-    "express": "^4.21.1",
-    "nodemon": "^3.1.7",
-    "pg": "^8.7.3",
+    "dotenv": "^16.4.7",
+    "express": "^5.1.0",
+    "nodemon": "^3.1.9",
+    "pg": "^8.14.1",
     "pg-format": "^1.0.4"
   },
   "devDependencies": {
-    "@types/cors": "^2.8.x",
-    "@types/express": "^4.17.x",
-    "@types/jest": "^27.5.2",
-    "@types/node": "^20.x.x",
-    "@types/pg": "^8.11.10",
-    "@types/supertest": "^2.0.16",
-    "supertest": "^7.0.0",
-    "ts-jest": "^29.x.x",
-    "ts-node": "^10.x.x",
-    "typescript": "^5.x.x"
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.1",
+    "@types/jest": "^29.5.14",
+    "@types/node": "^22.14.0",
+    "@types/pg": "^8.11.11",
+    "@types/pg-format": "^1.0.5",
+    "@types/supertest": "^6.0.3",
+    "jest-extended": "^4.0.2",
+    "jest-sorted": "^1.0.15",
+    "supertest": "^7.1.0",
+    "ts-jest": "^29.3.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.2"
   },
   "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node",
     "setupFilesAfterEnv": [
       "jest-extended/all",
       "jest-sorted"

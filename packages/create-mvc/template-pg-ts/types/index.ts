@@ -1,7 +1,13 @@
-import { PoolConfig, Pool } from "pg";
-
-export interface User {
-  id: number;
-  name: string;
+export type User = {
+  id?: number;
+  username: string;
   email: string;
+  password: string;
+  profile_image_url: string;
+  created_at: Date;
+  updated_at: Date;
+};
+
+export interface SeedData {
+  users: User[];
 }

@@ -5,3 +5,5 @@ playground/
 .DS_Store
 improvements.md
 notes.md
+.env
+.env.*
