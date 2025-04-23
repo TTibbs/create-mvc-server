@@ -9,4 +9,14 @@ require("jest-sorted");
 beforeEach(() => seed(data));
 afterAll(() => db.end());
 
-// Build tests here
+describe("GET /", () => {
+  test("should return a welcome message", async () => {
+    const { body } = await request(app).get("/").expect(200);
+    expect(body).toEqual({ message: "Welcome to the API!" });
+  });
+  test("GET /api should return a list of endpoints", async () => {
+    const { body } = await request(app).get("/api").expect(200);
+    const testEndpoints = body.endpoints;
+    expect(testEndpoints).toEqual(endpoints);
+  });
+});

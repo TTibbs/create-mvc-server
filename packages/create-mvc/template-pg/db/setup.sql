@@ -1,5 +1,5 @@
-DROP DATABASE IF EXISTS test_db_name_here;
-DROP DATABASE IF EXISTS db_name_here;
+DROP DATABASE IF EXISTS add_test_db_name_here;
+DROP DATABASE IF EXISTS add_db_name_here;
 
-CREATE DATABASE test_db_name_here;
-CREATE DATABASE db_name_here;
+CREATE DATABASE add_test_db_name_here;
+CREATE DATABASE add_db_name_here;

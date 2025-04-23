@@ -12,6 +12,10 @@ const {
 app.use(cors());
 app.use(express.json());
 
+app.get("/", (req, res) => {
+  res.status(200).send({ message: "Welcome to the API!" });
+});
+
 app.use("/api", apiRouter);
 app.use("/api/*", inputErrorHandler);
 app.use(psqlErrorHandler);

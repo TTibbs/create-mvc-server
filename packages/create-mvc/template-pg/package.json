@@ -19,7 +19,7 @@
     "setup-dbs": "psql -f db/setup.sql",
     "seed": "node db/seeds/run-seed.js",
     "seed-prod": "NODE_ENV=production npm run seed",
-    "test": "jest"
+    "test": "jest --runInBand"
   },
   "dependencies": {
     "cors": "^2.8.5",
