@@ -6,7 +6,6 @@ import { fileURLToPath } from "node:url";
 import minimist from "minimist";
 import prompts, { PromptObject } from "prompts";
 import colors from "picocolors";
-// Add new imports for enhanced UI
 import ora from "ora";
 import boxen from "boxen";
 import figures from "figures";
@@ -21,7 +20,7 @@ const {
   yellow,
   magenta,
   reset,
-  bold, // Added for better headers and emphasis
+  bold,
 } = colors;
 
 // Type definitions
@@ -74,99 +73,144 @@ const OPTIONS: Option[] = [
   },
 ];
 
-// Define templates and their requirements
-const TEMPLATES: Template[] = [
-  {
-    id: "pg-ts",
-    requirements: {
-      server: "Express",
-      database: "Postgres",
-      language: "TypeScript",
+// Technology name mappings for inferring requirements from template ids
+const TECH_MAPPINGS: Record<
+  string,
+  { type: string; value: string; weight?: number }
+> = {
+  pg: { type: "database", value: "Postgres", weight: 1 },
+  mongo: { type: "database", value: "MongoDB", weight: 1 },
+  mysql: { type: "database", value: "MySQL", weight: 1 },
+  sqlite: { type: "database", value: "SQLite", weight: 1 },
+  ts: { type: "language", value: "TypeScript", weight: 2 },
+  hono: { type: "server", value: "Hono", weight: 1 },
+  express: { type: "server", value: "Express", weight: 1 },
+};
+
+// Default color mappings for templates based on their primary technology
+const COLOR_MAPPINGS: Record<string, ColorFunc> = {
+  Postgres: blue,
+  MongoDB: green,
+  MySQL: magenta,
+  SQLite: cyan,
+  Hono: yellow,
+  TypeScript: blue,
+  JavaScript: yellow,
+  Express: blue,
+};
+
+// Function to dynamically discover available templates
+function discoverTemplates(): Template[] {
+  const templates: Template[] = [];
+  const templateDirPath = path.resolve(
+    fileURLToPath(import.meta.url),
+    "../../"
+  );
+
+  try {
+    const dirEntries = fs.readdirSync(templateDirPath, { withFileTypes: true });
+    const templateDirs = dirEntries.filter(
+      (dirent) => dirent.isDirectory() && dirent.name.startsWith("template-")
+    );
+
+    console.log(`Found ${templateDirs.length} potential template directories`);
+
+    for (const templateDir of templateDirs) {
+      const templateId = templateDir.name.replace("template-", "");
+      const requirements = inferRequirementsFromId(templateId);
+
+      // Skip if we couldn't infer all required options
+      const hasAllRequiredOptions = OPTIONS.every(
+        (option) => requirements[option.id] !== undefined
+      );
+
+      if (!hasAllRequiredOptions) {
+        console.warn(
+          `Skipping template ${templateId} as it's missing some required options`
+        );
+        continue;
+      }
+
+      // Determine color based on primary technology
+      const primaryTech = requirements.database || requirements.server;
+      const color =
+        COLOR_MAPPINGS[primaryTech] ||
+        (requirements.language === "TypeScript" ? blue : yellow);
+
+      templates.push({
+        id: templateId,
+        requirements,
+        color,
+      });
+    }
+
+    console.log(`Successfully loaded ${templates.length} templates`);
+    return templates;
+  } catch (error) {
+    console.error(`Error discovering templates: ${error}`);
+    // Return empty array if there's an error
+    return [];
+  }
+}
+
+// Function to infer template requirements from its ID
+export function inferRequirementsFromId(
+  templateId: string
+): Record<string, string> {
+  const requirements: Record<string, string> = {};
+  const parts = templateId.split("-");
+
+  // Process each part of the template ID
+  for (const part of parts) {
+    if (TECH_MAPPINGS[part]) {
+      const { type, value } = TECH_MAPPINGS[part];
+      requirements[type] = value;
+    }
+  }
+
+  // Default to Express if no server framework is specified
+  if (!requirements.server) {
+    requirements.server = "Express";
+  }
+
+  // Default to JavaScript if no language is specified
+  if (!requirements.language) {
+    requirements.language = "JavaScript";
+  }
+
+  return requirements;
+}
+
+// Discover templates dynamically
+const TEMPLATES = discoverTemplates();
+
+// If no templates were found, provide some fallback templates for development
+if (TEMPLATES.length === 0) {
+  console.warn("No templates discovered, using fallback templates");
+
+  // Default template definitions (fallback)
+  [
+    {
+      id: "pg-ts",
+      requirements: {
+        server: "Express",
+        database: "Postgres",
+        language: "TypeScript",
+      },
+      color: blue,
     },
-    color: blue,
-  },
-  {
-    id: "pg",
-    requirements: {
-      server: "Express",
-      database: "Postgres",
-      language: "JavaScript",
+    {
+      id: "pg",
+      requirements: {
+        server: "Express",
+        database: "Postgres",
+        language: "JavaScript",
+      },
+      color: blueBright,
     },
-    color: blueBright,
-  },
-  {
-    id: "mongo-ts",
-    requirements: {
-      server: "Express",
-      database: "MongoDB",
-      language: "TypeScript",
-    },
-    color: green,
-  },
-  {
-    id: "mongo",
-    requirements: {
-      server: "Express",
-      database: "MongoDB",
-      language: "JavaScript",
-    },
-    color: greenBright,
-  },
-  {
-    id: "mysql-ts",
-    requirements: {
-      server: "Express",
-      database: "MySQL",
-      language: "TypeScript",
-    },
-    color: magenta,
-  },
-  {
-    id: "mysql",
-    requirements: {
-      server: "Express",
-      database: "MySQL",
-      language: "JavaScript",
-    },
-    color: magenta,
-  },
-  {
-    id: "sqlite-ts",
-    requirements: {
-      server: "Express",
-      database: "SQLite",
-      language: "TypeScript",
-    },
-    color: cyan,
-  },
-  {
-    id: "sqlite",
-    requirements: {
-      server: "Express",
-      database: "SQLite",
-      language: "JavaScript",
-    },
-    color: cyan,
-  },
-  {
-    id: "hono-pg-ts",
-    requirements: {
-      server: "Hono",
-      database: "Postgres",
-      language: "TypeScript",
-    },
-    color: yellow,
-  },
-  {
-    id: "hono-pg",
-    requirements: {
-      server: "Hono",
-      database: "Postgres",
-      language: "JavaScript",
-    },
-    color: yellow,
-  },
-];
+    // Add your default templates here as fallback
+  ].forEach((template) => TEMPLATES.push(template));
+}
 
 // Default target directory
 const defaultTargetDir = "mvc-server";
@@ -396,7 +440,7 @@ async function init() {
     showStep(1, 4, "Project configuration");
 
     // Only ask for selection mode if no template is specified via arguments
-    let selectionMode = "custom"; // default
+    let selectionMode = argTemplate ? "template" : "custom"; // default
     if (!argTemplate) {
       const modeResult = await prompts(
         {
@@ -428,9 +472,10 @@ async function init() {
       selectionMode = modeResult.selectionMode;
     }
     result.selectionMode = selectionMode;
+    result.templateChoice = argTemplate; // Set template choice from command line argument if provided
 
-    // Get template choice if template mode is selected
-    if (selectionMode === "template") {
+    // Get template choice if template mode is selected and no template argument was provided
+    if (selectionMode === "template" && !argTemplate) {
       const templateResult = await prompts(
         {
           type: "select",
@@ -623,14 +668,36 @@ ${bold("Template:")} ${template.color(template.id)}`,
       fs.mkdirSync(root, { recursive: true });
     }
 
-    const templateDir = path.resolve(
-      fileURLToPath(import.meta.url),
-      "../../",
-      `template-${template.id}`
-    );
+    // Update template resolution to check for template directory at multiple locations
+    let templateDir = "";
+    const possibleTemplatePaths = [
+      // Current working directory
+      path.resolve(process.cwd(), `template-${template.id}`),
+      // Sibling directory to src
+      path.resolve(
+        fileURLToPath(import.meta.url),
+        "../../",
+        `template-${template.id}`
+      ),
+      // Parent directory of script
+      path.resolve(
+        fileURLToPath(import.meta.url),
+        "../../../",
+        `template-${template.id}`
+      ),
+    ];
 
-    if (!fs.existsSync(templateDir)) {
-      throw new Error(`Template ${template.id} not found`);
+    for (const possiblePath of possibleTemplatePaths) {
+      if (fs.existsSync(possiblePath)) {
+        templateDir = possiblePath;
+        break;
+      }
+    }
+
+    if (!templateDir) {
+      throw new Error(
+        `Template ${template.id} not found in any of the expected locations.`
+      );
     }
 
     showStep(3.5, 4, "Creating project files");
@@ -713,7 +780,7 @@ function copy(src: string, dest: string) {
 }
 
 // Validate package name
-function isValidPackageName(projectName: string) {
+export function isValidPackageName(projectName: string) {
   return /^(?:@[a-z\d\-*~][a-z\d\-*._~]*\/)?[a-z\d\-~][a-z\d\-._~]*$/.test(
     projectName
   );
