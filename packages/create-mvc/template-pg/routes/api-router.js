@@ -1,4 +1,5 @@
-const apiRouter = require("express").Router();
+const express = require("express");
+const apiRouter = express.Router();
 const usersRouter = require("./users-router.js");
 const endpoints = require("../endpoints.json");
 

@@ -6,12 +6,12 @@
   "main": "listener.js",
   "repository": {
     "type": "git",
-    "url": "git+test.git"
+    "url": "git+https://github.com/yourusername/your-repo-name.git"
   },
   "bugs": {
-    "url": "test/issues"
+    "url": "https://github.com/yourusername/your-repo-name/issues"
   },
-  "homepage": "test#readme",
+  "homepage": "https://github.com/yourusername/your-repo-name#readme",
   "keywords": [],
   "license": "MIT",
   "scripts": {

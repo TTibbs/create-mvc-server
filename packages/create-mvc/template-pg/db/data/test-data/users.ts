@@ -1,4 +1,6 @@
-module.exports = [
+import { User } from "../../../types";
+
+export const users: User[] = [
   {
     username: "alice123",
     email: "alice@example.com",

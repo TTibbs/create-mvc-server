@@ -1,4 +1,4 @@
-module.exports = [
+const users = [
   {
     name: "Alice",
     email: "alice@example.com",
@@ -27,3 +27,5 @@ module.exports = [
     updated_at: new Date(),
   },
 ];
+
+export default users;
