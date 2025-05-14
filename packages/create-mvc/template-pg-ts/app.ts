@@ -17,7 +17,7 @@ app.get("/", (req: Request, res: Response) => {
 });
 
 app.use("/api", apiRouter);
-app.use("/api/*", inputErrorHandler);
+app.use("/api/*splat", inputErrorHandler);
 app.use(psqlErrorHandler);
 app.use(customErrorHandler);
 app.use(serverErrorHandler);
