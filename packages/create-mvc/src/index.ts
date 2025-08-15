@@ -57,7 +57,7 @@ const OPTIONS: Option[] = [
     id: "database",
     display: "Database",
     choices: [
-      { name: "Postgres", color: blue },
+      { name: "PostgreSQL", color: blue },
       { name: "MongoDB", color: green },
       { name: "MySQL", color: magenta },
       { name: "SQLite", color: cyan },
@@ -78,7 +78,7 @@ const TECH_MAPPINGS: Record<
   string,
   { type: string; value: string; weight?: number }
 > = {
-  pg: { type: "database", value: "Postgres", weight: 1 },
+  pg: { type: "database", value: "PostgreSQL", weight: 1 },
   mongo: { type: "database", value: "MongoDB", weight: 1 },
   mysql: { type: "database", value: "MySQL", weight: 1 },
   sqlite: { type: "database", value: "SQLite", weight: 1 },
@@ -89,7 +89,7 @@ const TECH_MAPPINGS: Record<
 
 // Default color mappings for templates based on their primary technology
 const COLOR_MAPPINGS: Record<string, ColorFunc> = {
-  Postgres: blue,
+  PostgreSQL: blue,
   MongoDB: green,
   MySQL: magenta,
   SQLite: cyan,
@@ -194,7 +194,7 @@ if (TEMPLATES.length === 0) {
       id: "pg-ts",
       requirements: {
         server: "Express",
-        database: "Postgres",
+        database: "PostgreSQL",
         language: "TypeScript",
       },
       color: blue,
@@ -203,7 +203,7 @@ if (TEMPLATES.length === 0) {
       id: "pg",
       requirements: {
         server: "Express",
-        database: "Postgres",
+        database: "PostgreSQL",
         language: "JavaScript",
       },
       color: blueBright,
