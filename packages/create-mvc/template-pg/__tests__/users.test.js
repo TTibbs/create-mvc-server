@@ -1,8 +1,8 @@
-import app from "../app";
-import request from "supertest";
-import db from "../db/connection";
-import seed from "../db/seeds/seed";
-import { users } from "../db/data/test-data/index";
+const app = require("../app");
+const request = require("supertest");
+const db = require("../db/connection");
+const seed = require("../db/seeds/seed");
+const { users } = require("../db/data/test-data/index");
 
 beforeEach(() =>
   seed({

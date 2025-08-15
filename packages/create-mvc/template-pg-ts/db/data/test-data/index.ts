@@ -1,3 +1,3 @@
 import { users } from "./users";
 
-export { users };
+export const testData = { users };

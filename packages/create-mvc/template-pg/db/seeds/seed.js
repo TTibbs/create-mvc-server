@@ -1,5 +1,5 @@
-import db from "../connection";
-import format from "pg-format";
+const db = require("../connection");
+const format = require("pg-format");
 
 const seed = async ({ users }) => {
   try {
@@ -34,4 +34,4 @@ const seed = async ({ users }) => {
   }
 };
 
-export default seed;
+module.exports = seed;

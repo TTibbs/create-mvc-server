@@ -1,6 +1,4 @@
-import { User } from "../../../types";
-
-export const users: User[] = [
+const users = [
   {
     username: "alice123",
     email: "alice@example.com",
@@ -29,3 +27,5 @@ export const users: User[] = [
     updated_at: new Date(),
   },
 ];
+
+module.exports = { users };

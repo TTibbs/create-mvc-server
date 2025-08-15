@@ -7,14 +7,9 @@ import {
   getUserByEmail,
 } from "../controllers/users-controller";
 
-const getUsersHandler = getUsers as RequestHandler;
-const getUserByIdHandler = getUserById as RequestHandler;
-const getUserByUsernameHandler = getUserByUsername as RequestHandler;
-const getUserByEmailHandler = getUserByEmail as RequestHandler;
-
-usersRouter.get("/", getUsersHandler);
-usersRouter.get("/username/:username", getUserByUsernameHandler);
-usersRouter.get("/email/:email", getUserByEmailHandler);
-usersRouter.get("/:id", getUserByIdHandler);
+usersRouter.get("/", getUsers as RequestHandler);
+usersRouter.get("/username/:username", getUserByUsername as RequestHandler);
+usersRouter.get("/email/:email", getUserByEmail as RequestHandler);
+usersRouter.get("/:id", getUserById as RequestHandler);
 
 export default usersRouter;

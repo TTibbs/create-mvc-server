@@ -1,5 +1,5 @@
-import express from "express";
-const apiRouter = express.Router();
+import { Router } from "express";
+const apiRouter = Router();
 import usersRouter from "./users-router";
 import endpoints from "../endpoints.json";
 

@@ -2,11 +2,11 @@ import app from "../app";
 import request from "supertest";
 import db from "../db/connection";
 import seed from "../db/seeds/seed";
-import { users } from "../db/data/test-data";
+import { testData } from "../db/data/test-data";
 import endpointsTest from "../endpoints.json";
 require("jest-sorted");
 
-beforeEach(() => seed({ users }));
+beforeEach(() => seed(testData));
 afterAll(async () => {
   await db.end();
 });

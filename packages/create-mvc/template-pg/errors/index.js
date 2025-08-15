@@ -1,6 +1,5 @@
 exports.inputErrorHandler = (req, res, next) => {
   res.status(404).send({ msg: "Invalid input" });
-  next(err);
 };
 
 exports.psqlErrorHandler = (err, req, res, next) => {
