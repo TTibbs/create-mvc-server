@@ -1,7 +1,7 @@
 {
   "name": "create-mvc-server",
   "private": false,
-  "version": "1.1.8",
+  "version": "1.1.9",
   "type": "module",
   "bin": {
     "create-mvc-server": "./packages/create-mvc/index.js"
@@ -27,7 +27,12 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "cd packages/create-mvc && npm run build",
-    "prepare": "npm run build"
+    "prepare": "npm run build",
+    "release": "npm version patch && npm run build && npm publish --dry-run && echo 'Dry run successful! Run: npm publish'",
+    "release:minor": "npm version minor && npm run build && npm publish --dry-run && echo 'Dry run successful! Run: npm publish'",
+    "release:major": "npm version major && npm run build && npm publish --dry-run && echo 'Dry run successful! Run: npm publish'",
+    "release:script": "node scripts/release.js",
+    "publish:real": "npm publish"
   },
   "keywords": [
     "cli",
@@ -66,8 +71,7 @@
     "supertest": "^7.1.0",
     "ts-jest": "^29.3.1",
     "ts-node": "^10.9.2",
-    "typescript": "^5.7.3",
-    "vitest": "^2.1.8"
+    "typescript": "^5.7.3"
   },
   "jest": {
     "preset": "ts-jest",
