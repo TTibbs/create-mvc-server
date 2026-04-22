@@ -2,6 +2,9 @@
   "name": "create-mvc-server",
   "private": false,
   "version": "1.1.9",
+  "workspaces": [
+    "packages/*"
+  ],
   "type": "module",
   "bin": {
     "create-mvc-server": "./packages/create-mvc/index.js"
@@ -26,7 +29,8 @@
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "cd packages/create-mvc && npm run build",
+    "build": "npm run build:create-mvc",
+    "build:create-mvc": "cd packages/create-mvc && npm run build",
     "prepare": "npm run build",
     "release": "npm version patch && npm run build && npm publish --dry-run && echo 'Dry run successful! Run: npm publish'",
     "release:minor": "npm version minor && npm run build && npm publish --dry-run && echo 'Dry run successful! Run: npm publish'",

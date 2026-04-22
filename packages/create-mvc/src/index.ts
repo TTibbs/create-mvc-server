@@ -389,6 +389,108 @@ function getPackageManagerCommand(userAgent: string | undefined) {
   }
 }
 
+function generateAgentsMd(requirements: Record<string, string>): string {
+  const { server, database, language } = requirements;
+
+  const frameworkRules: Record<string, string> = {
+    Express: `## Framework: Express
+- Use middleware for shared logic
+- Keep controllers thin
+- Use next(err) for error handling`,
+    Hono: `## Framework: Hono
+- Prefer lightweight handlers
+- Avoid heavy middleware chains
+- Optimise for edge/serverless`,
+  };
+
+  const databaseRules: Record<string, string> = {
+    PostgreSQL: `## Database: PostgreSQL
+- Use parameterized queries only
+- No string interpolation
+- Queries belong in models`,
+    MongoDB: `## Database: MongoDB
+- Use Mongoose models
+- Avoid direct driver usage`,
+    MySQL: `## Database: MySQL
+- Use parameterized queries
+- Keep logic out of queries`,
+    SQLite: `## Database: SQLite
+- Keep queries simple and local
+- Avoid over-engineering`,
+  };
+
+  const languageRules: Record<string, string> = {
+    TypeScript: `## TypeScript Rules
+- All functions must be typed
+- Avoid 'any'
+- Use interfaces/types for data`,
+    JavaScript: `## JavaScript Rules
+- Use JSDoc where helpful
+- Prefer consistent structure`,
+  };
+
+  const frameworkSection = frameworkRules[server] ?? "";
+  const databaseSection = databaseRules[database] ?? "";
+  const languageSection = languageRules[language] ?? "";
+
+  return `# AGENTS.md
+
+## Overview
+
+This is an MVC server built with:
+- Framework: ${server}
+- Database: ${database}
+- Language: ${language}
+
+Architecture:
+routes -> controllers -> services -> models -> database
+
+---
+
+## Architecture Rules
+
+- Controllers must not contain business logic
+- Services handle business logic
+- Models handle data access only
+- Routes must stay thin
+
+---
+
+${frameworkSection}
+
+---
+
+${databaseSection}
+
+---
+
+${languageSection}
+
+---
+
+## API Conventions
+
+- Use RESTful patterns
+- Return: { data: ... }
+
+---
+
+## Error Handling
+
+- Use global error middleware
+- Do not send responses from services
+
+---
+
+## Instructions for AI Agents
+
+- Follow existing patterns strictly
+- Do not introduce new architecture styles
+- Prefer editing existing files over creating new ones
+- Reuse utilities where possible
+`;
+}
+
 // Main function to initialise the project
 async function init() {
   const argTargetDir = formatTargetDir(argv._[0]);
@@ -734,6 +836,15 @@ ${bold("Template:")} ${template.color(template.id)}`,
     write("package.json", JSON.stringify(pkg, null, 2) + "\n");
 
     spinner.succeed("Project created successfully!");
+
+    // Generate AGENTS.md from selected template requirements.
+    try {
+      const agentsContent = generateAgentsMd(template.requirements);
+      fs.writeFileSync(path.join(root, "AGENTS.md"), agentsContent);
+      console.log(green("✔ AGENTS.md generated"));
+    } catch (error: any) {
+      console.warn(yellow("⚠ Failed to generate AGENTS.md"), error.message);
+    }
 
     // Print final instructions
     showStep(4, 4, "Finalizing setup");
